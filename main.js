@@ -18,6 +18,9 @@ class Cell{
         this.x = x;
         this.y = y;
         this.type = type;
+        this.doorOpen = false;
+        this.desiredDoorRotation = 0;
+        this.currentDoorRotation = 0;
     }
 
     isWall() {
@@ -42,6 +45,12 @@ class Cell{
             this.cellS().isWall()
         ];
         return walls.map(w => w ? 'w' : 'e').join('');
+    }
+
+    setDoorOpen(state) {
+        if(this.doorOpen == state) return;
+        this.doorOpen = state;
+        this.desiredDoorRotation += state ? -1 : 1;
     }
 }
 
@@ -70,6 +79,14 @@ class Map{
                 }
             }
         }
+
+        // set door cells so we can update door angles without having to search through all cells
+        this.doorCells = [];
+        this.forEachCell(c => {
+            if(c.type == 'door') {
+                this.doorCells.push(c);
+            }
+        });
     }
 
     at(x, y) {
@@ -96,11 +113,21 @@ class Player {
     }
 
     tryToMove(dx, dy) {
+        const oldCell = this.world.map.at(this.x, this.y);
         const newCell = this.world.map.at(this.x + dx, this.y + dy);
         if(!newCell.isWall()) {
             this.x += dx;
             this.y += dy;
-            return true;
+        }else{
+            return false;
+        }
+
+        // if we moved, set door states
+        if(oldCell.type == 'door') {
+            oldCell.setDoorOpen(false);
+        }
+        if(newCell.type == 'door') {
+            newCell.setDoorOpen(true);
         }
     }
 }
@@ -125,11 +152,13 @@ class World{
 
 class WorldView {
     constructor(world) {
+        this.panSpeed = 0.09; // how fast the camera moves, (0, 1]. 1 = instant
+        this.doorOpenSpeed = 0.08; // how fast doors open, (0, 1]. 1 = instant
+
         this.world = world;
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         this.camera.up.set(0, 0, 1);
-        this.panSpeed = 0.09; // how fast the camera moves, (0, 1]. 1 = instant
         this.lastFrameTime = 0;
 
         this.renderer = new THREE.WebGLRenderer();
@@ -146,7 +175,7 @@ class WorldView {
         var fillLight = new THREE.AmbientLight(0x777777ff, 0.5);
         this.scene.add(fillLight);
 
-        this.playerLight = new THREE.PointLight(0xff8800, 2.0, 5);
+        this.playerLight = new THREE.PointLight(0xff8811, 2.0, 5);
         this.playerLight.position.set(0, 0, 0.9);
         this.playerLight.castShadow = true;
         this.playerLight.shadow.camera.far = this.playerLight.distance;
@@ -159,11 +188,12 @@ class WorldView {
     render(time = 0) {
         requestAnimationFrame(this.render.bind(this));
         const dt = time - (this.lastFrameTime || 0);
+        const df = dt * 60 / 1000;
         this.lastFrameTime = time;
 
         // move camera
         const newCamPos = new Vec3(world.player.x, world.player.y, 0);
-        this.camPos.lerp(newCamPos, 1 - Math.pow(1 - this.panSpeed, dt * 60 / 1000));
+        this.camPos.lerp(newCamPos, 1 - Math.pow(1 - this.panSpeed, df));
 
         this.camera.position.set(this.camPos.x-0.08, this.camPos.y-1, 5);
         this.camera.lookAt(this.camPos.x, this.camPos.y, 0.5);
@@ -171,10 +201,21 @@ class WorldView {
         // move player light
         this.playerLight.position.set(this.camPos.x, this.camPos.y, this.playerLight.position.z);
 
+        // move doors
+        this.world.map.doorCells.forEach(c => {
+            if(c.currentDoorRotation < c.desiredDoorRotation) {
+                c.currentDoorRotation = Math.min(c.currentDoorRotation + this.doorOpenSpeed * df, c.desiredDoorRotation);
+                c.doorObject.setRotationFromAxisAngle(new Vec3(0, 0, 1), Math.PI*0.5*c.currentDoorRotation);
+            } else if(c.currentDoorRotation > c.desiredDoorRotation) {
+                c.currentDoorRotation = Math.max(c.currentDoorRotation - this.doorOpenSpeed * df, c.desiredDoorRotation);
+                c.doorObject.setRotationFromAxisAngle(new Vec3(0, 0, 1), Math.PI*0.5*c.currentDoorRotation);
+            }
+        });
+
         this.renderer.render(this.scene, this.camera);
     }
 
-    loadObject(name, position, rot = 0, options = {cast: false}) {
+    loadObject(name, position, rot = 0, options = {cast: false, doorFor: null}) {
         var loader = new THREE.GLTFLoader();
 
         loader.load(`objects/${name}.glb`, gltf => {
@@ -191,6 +232,10 @@ class WorldView {
             gltf.scene.position.x = position.x;
             gltf.scene.position.y = position.y;
             gltf.scene.position.z = position.z;
+
+            if(options.doorFor) {
+                options.doorFor.doorObject = gltf.scene;
+            }
         });
     }
 
@@ -262,6 +307,31 @@ class WorldView {
                 // add floor
                 const l = randChoice(['a', 'b', 'c']);
                 this.loadObject('floor0'+l, new THREE.Vector3(c.x, c.y, 0), randInt(0, 4));
+
+                if(c.type == 'door') {
+                    this.loadObject('doorFrame', new THREE.Vector3(c.x, c.y, 0), 2+c.cellE().isWall(), {cast: true});
+                    if(c.cellE().isWall()) {
+                        c.desiredDoorRotation = c.currentDoorRotation = 3;
+                        this.loadObject('door',
+                            new THREE.Vector3(c.x-0.25, c.y, 0),
+                            c.currentDoorRotation,
+                            {
+                                cast: true,
+                                doorFor: c,
+                            }
+                        );
+                    }else{
+                        c.desiredDoorRotation = c.currentDoorRotation = 2;
+                        this.loadObject('door',
+                            new THREE.Vector3(c.x, c.y+0.25, 0),
+                            c.currentDoorRotation,
+                            {
+                                cast: true,
+                                doorFor: c,
+                            }
+                        );
+                    }
+                }
             }
         });
     }
