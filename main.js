@@ -140,19 +140,25 @@ class Player {
 
 class World{
     constructor() {
-        this.map = new Map(9, 9, `
-            1 1 1 1 1 1 1 1 1
-            1 0 0 0 1 1 1 s 1
-            1 0 1 0 0 0 0 0 1
-            1 0 0 1 1 1 d 1 1
-            1 1 0 1 1 0 0 0 1
-            1 1 0 1 1 0 0 0 1
-            1 0 0 0 d 0 w w 1
-            1 s 1 1 1 0 w 0 1
-            1 1 1 1 1 1 1 1 1
+        this.map = new Map(15, 15, `
+            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+            1 0 0 0 1 1 1 s 1 1 0 0 0 1 1
+            1 0 1 0 0 0 0 0 0 0 0 1 1 1 1
+            1 0 0 1 1 1 d 1 1 1 0 0 0 1 1
+            1 1 0 1 1 0 0 0 1 1 0 1 0 1 1
+            1 1 0 1 1 0 0 0 1 1 0 0 0 1 1
+            1 0 0 0 d 0 w w 1 1 1 0 1 1 1
+            1 s 1 0 1 0 w 0 1 1 1 0 1 1 1
+            1 1 1 0 1 1 1 d 1 1 1 d 1 1 1
+            1 0 0 0 1 1 1 0 1 0 0 0 0 0 1
+            1 0 1 1 1 1 1 0 1 0 w w w 0 1
+            1 0 1 1 0 0 0 0 1 0 w w w 0 1
+            1 0 0 0 0 1 1 0 d 0 0 0 0 0 1
+            1 1 1 1 1 1 1 1 1 1 1 0 0 0 1
+            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         `);
 
-        this.player = new Player(this, 1, 1);
+        this.player = new Player(this, 1, 7);
     }
 }
 
@@ -160,6 +166,7 @@ class WorldView {
     constructor(world) {
         this.panSpeed = 0.09; // how fast the camera moves, (0, 1]. 1 = instant
         this.doorOpenSpeed = 0.08; // how fast doors open, (0, 1]. 1 = instant
+        this.hardcoreMode = false; // whether to only light the dungeon you can see
 
         this.world = world;
         this.scene = new THREE.Scene();
@@ -173,30 +180,36 @@ class WorldView {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(this.renderer.domElement);
 
-        /* background lighting */
-        var keyLight = new THREE.DirectionalLight(0xffffcc, 0.5);
-        keyLight.position.set(-7, -10, 10);
-        // keyLight.castShadow = true;
-        this.scene.add(keyLight);
-
-        var fillLight = new THREE.AmbientLight(0x777777ff, 0.5);
-        this.scene.add(fillLight);
-
         /* player light */
-        this.playerLight = new THREE.PointLight(0xff8811, 2.0, 5);
-        this.playerLight.position.set(0, 0, 0.9);
+        this.playerLight = new THREE.PointLight(0xff8811, this.hardcoreMode ? 3.0 : 2.5, 7, 0.8);
+        this.playerLight.position.set(0, 0, 0.8);
         this.playerLight.castShadow = true;
         this.playerLight.shadow.camera.far = this.playerLight.distance;
         this.playerLight.shadow.camera.near = 0.1;
         this.scene.add(this.playerLight);
 
-        /* environment lighting */
-        var waterLight = new THREE.PointLight(0x00ffaa, 1.0, 4.0, 1.0);
-        waterLight.position.set(6, 2.5, 0.2);
-        waterLight.shadow.camera.far = 5;
-        waterLight.castShadow = true;
-        this.scene.add(waterLight);
+        /* background lighting */
+        this.keyLight = new THREE.DirectionalLight(0xffffcc, 0.5);
+        this.keyLight.position.set(-7, -10, 10);
+        if(!this.hardcoreMode) this.scene.add(this.keyLight);
 
+        this.fillLight = new THREE.AmbientLight(0x777777ff, 0.25);
+        if(!this.hardcoreMode) this.scene.add(this.fillLight);
+
+        /* environment lighting */
+        // var waterLight = new THREE.PointLight(0x00ffaa, 1.0, 4.0, 0.0);
+        // waterLight.position.set(6, 8.5, 0.5);
+        // waterLight.shadow.camera.far = 5;
+        // waterLight.shadow.camera.near = 0.1;
+        // waterLight.castShadow = true;
+        // this.scene.add(waterLight);
+
+        // var waterLight2 = new THREE.PointLight(0x00ffaa, 1.0, 4.0, 0.0);
+        // waterLight2.position.set(11, 3, 0.5);
+        // waterLight2.shadow.camera.far = 5;
+        // waterLight2.shadow.camera.near = 0.1;
+        // waterLight2.castShadow = true;
+        // this.scene.add(waterLight2);
     }
 
     render(time = 0) {
@@ -209,7 +222,7 @@ class WorldView {
         const newCamPos = new Vec3(world.player.x, world.player.y, 0);
         this.camPos.lerp(newCamPos, 1 - Math.pow(1 - this.panSpeed, df));
 
-        this.camera.position.set(this.camPos.x-0.08, this.camPos.y-1, 5);
+        this.camera.position.set(this.camPos.x-0.08, this.camPos.y-1, 6);
         this.camera.lookAt(this.camPos.x, this.camPos.y, 0.5);
 
         // move player light
