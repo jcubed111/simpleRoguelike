@@ -45,25 +45,31 @@ class Player {
 
 class World{
     constructor() {
-        this.map = new Map(15, 15, `
-            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-            1 0 0 0 1 1 1 s 1 1 0 0 0 1 1
-            1 0 1 0 0 0 0 0 0 0 0 1 1 1 1
-            1 0 0 1 1 1 d 1 1 1 0 0 0 1 1
-            1 1 0 1 1 0 0 0 1 1 0 1 0 1 1
-            1 1 0 1 1 0 0 0 1 1 0 0 0 1 1
-            1 0 0 0 d 0 w w 1 1 1 0 1 1 1
-            1 s 1 0 1 0 w 0 1 1 1 0 1 1 1
-            1 1 1 0 1 1 1 d 1 1 1 d 1 1 1
-            1 0 0 0 1 1 1 0 1 0 0 0 0 0 1
-            1 0 1 1 1 1 1 0 1 0 w w w 0 1
-            1 0 1 1 0 0 0 0 1 0 w w w 0 1
-            1 0 0 0 0 1 1 0 d 0 0 0 0 0 1
-            1 1 1 1 1 1 1 1 1 1 1 0 0 0 1
-            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-        `);
+        // this.map = new Map(15, 15, `
+        //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+        //     1 0 0 0 1 1 1 s 1 1 0 0 0 1 1
+        //     1 0 1 0 0 0 0 0 0 0 0 1 1 1 1
+        //     1 0 0 1 1 1 d 1 1 1 0 0 0 1 1
+        //     1 1 0 1 1 0 0 0 1 1 0 1 0 1 1
+        //     1 1 0 1 1 0 0 0 1 1 0 0 0 1 1
+        //     1 0 0 0 d 0 w w 1 1 1 0 1 1 1
+        //     1 s 1 0 1 0 w 0 1 1 1 0 1 1 1
+        //     1 1 1 0 1 1 1 d 1 1 1 d 1 1 1
+        //     1 0 0 0 1 1 1 0 1 0 0 0 0 0 1
+        //     1 0 1 1 1 1 1 0 1 0 w w w 0 1
+        //     1 0 1 1 0 0 0 0 1 0 w w w 0 1
+        //     1 0 0 0 0 1 1 0 d 0 0 0 0 0 1
+        //     1 1 1 1 1 1 1 1 1 1 1 0 0 0 1
+        //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+        // `);
+
+        this.map = new Map(35, 35);
 
         this.player = new Player(this, 1, 7);
+
+        const startingCell = randChoice(this.map.filterCells(c => c.type == 'floor'));
+        this.player.x = startingCell.x;
+        this.player.y = startingCell.y;
 
         this.updateCellVisibility();
     }
@@ -136,6 +142,7 @@ class WorldView {
         this.panSpeed = 0.09; // how fast the camera moves, (0, 1]. 1 = instant
         this.doorOpenSpeed = 0.08; // how fast doors open, (0, 1]. 1 = instant
         this.hardcoreMode = false; // whether to only light the dungeon you can see
+        this.cameraZ = 5;
 
         this.world = world;
         this.scene = new THREE.Scene();
@@ -218,7 +225,7 @@ class WorldView {
         const newCamPos = new Vec3(this.world.player.x, this.world.player.y, 0);
         this.camPos.lerp(newCamPos, 1 - Math.pow(1 - this.panSpeed, df));
 
-        this.camera.position.set(this.camPos.x-0.08, this.camPos.y-1, 5);
+        this.camera.position.set(this.camPos.x-0.08, this.camPos.y-1, this.cameraZ);
         this.camera.lookAt(this.camPos.x, this.camPos.y, 0.5);
 
         // move player light
