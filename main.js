@@ -64,6 +64,8 @@ class World{
         `);
 
         this.player = new Player(this, 1, 7);
+
+        this.updateCellVisibility();
     }
 
     updateCellVisibility() {
@@ -164,25 +166,21 @@ class WorldView {
         if(!this.hardcoreMode) this.scene.add(this.fillLight);
 
         /* environment lighting */
-        // var waterLight = new THREE.PointLight(0x00ffaa, 1.0, 4.0, 0.0);
-        // waterLight.position.set(6, 8.5, 0.5);
-        // waterLight.shadow.camera.far = 5;
-        // waterLight.shadow.camera.near = 0.1;
-        // waterLight.castShadow = true;
-        // this.scene.add(waterLight);
+        let waterLight = this.waterLight = new THREE.RectAreaLight(0x00ffaa, 1.5, 2, 3);
+        waterLight.position.set(6, 8.5, 0.9);
+        waterLight.setRotationFromAxisAngle(new Vec3(1, 0, 0), Math.PI); // point down
+        this.scene.add(waterLight);
 
-        // var waterLight2 = new THREE.PointLight(0x00ffaa, 1.0, 4.0, 0.0);
-        // waterLight2.position.set(11, 3, 0.5);
-        // waterLight2.shadow.camera.far = 5;
-        // waterLight2.shadow.camera.near = 0.1;
-        // waterLight2.castShadow = true;
-        // this.scene.add(waterLight2);
+        let waterLight2 = this.waterLight2 = new THREE.RectAreaLight(0x00ffaa, 1.5, 4, 4);
+        waterLight2.position.set(11, 3, 0.9);
+        waterLight2.setRotationFromAxisAngle(new Vec3(1, 0, 0), Math.PI); // point down
+        this.scene.add(waterLight2);
 
         /* player sprite */
         var loader = new THREE.FontLoader();
 
         loader.load('Inconsolata_Medium.json', font => {
-            var geometry = new THREE.TextGeometry('M', {
+            var geometry = new THREE.TextGeometry('@', {
                 font: font,
                 size: 0.8,
                 height: 0.1,
@@ -192,13 +190,21 @@ class WorldView {
                 bevelSize: 0.05,
                 bevelSegments: 2
             });
-            var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+            var material = new THREE.MeshBasicMaterial( { color: 0xdddddd } );
             this.player = new THREE.Mesh( geometry, material );
             this.player.scale.y = 0.7;
             // this.player.scale.x = 1.4;
             this.player.castShadow = true;
             this.scene.add( this.player );
         } );
+    }
+
+    screenCoordToWorldCoord(x, y) {
+        let v = new Vec3(x, y, 0);
+        v.unproject(this.camera);
+        let ray = v.clone().sub(this.camera.position); // from camera to the screen coord point
+        let final = this.camera.position.clone().addScaledVector(ray, -this.camera.position.z / ray.z);
+        return final;
     }
 
     render(time = 0) {
@@ -211,7 +217,7 @@ class WorldView {
         const newCamPos = new Vec3(this.world.player.x, this.world.player.y, 0);
         this.camPos.lerp(newCamPos, 1 - Math.pow(1 - this.panSpeed, df));
 
-        this.camera.position.set(this.camPos.x-0.08, this.camPos.y-1, 6);
+        this.camera.position.set(this.camPos.x-0.08, this.camPos.y-1, 5);
         this.camera.lookAt(this.camPos.x, this.camPos.y, 0.5);
 
         // move player light
@@ -236,6 +242,8 @@ class WorldView {
             }
         });
 
+
+
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -244,7 +252,6 @@ class WorldView {
 
         loader.load(`objects/${name}.glb`, gltf => {
             const object = gltf.scene;
-            this.scene.add(object);
             object.rotateZ(rot * Math.PI/2.0);
 
             function setShadowProps(thing) {
@@ -261,15 +268,22 @@ class WorldView {
             object.position.z = position.z;
 
             if(cell) {
+                object.visible = false;
                 cellPartNames.split(' ').forEach(n => {
                     cell.objects[n].push(object);
                 });
+            }else{
+                // if we're part of a cell, we'll get added to the scene through the cell's group
+                // otherwise, add manually
+                this.scene.add(object);
             }
         });
     }
 
     loadLevelObjects() {
         this.world.map.forEachCell(c => {
+            this.scene.add(c.objectGroup);
+
             if(c.isWall()) {
                 // build the walls in this cell
                 const wallProfile = c.getWallProfile();
@@ -346,7 +360,7 @@ class WorldView {
                 const l = randChoice(['a', 'b', 'c']);
                 this.loadObject('floor0'+l, new THREE.Vector3(c.x, c.y, -0.5), randInt(0, 4), c, 'main');
                 // add water surface
-                this.loadObject('water', new THREE.Vector3(c.x, c.y, 0), 0, c, 'main');
+                this.loadObject('water', new THREE.Vector3(c.x, c.y, -0.1), 0, c, 'main');
                 // add below water walls
                 [
                     c.cellE().type != 'water',

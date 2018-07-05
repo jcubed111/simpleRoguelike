@@ -1,12 +1,16 @@
 class ObjectSet {
-    constructor() {
+    constructor(g) {
+        this.group = g;
         this.objects = [];
         this.shouldBeVisible = false;
     }
 
     push(o) {
         this.objects.push(o);
-        o.visible = this.shouldBeVisible;
+        this.group.add(o);
+        if(this.shouldBeVisible) {
+            o.visible = true;
+        }
     }
 
     setVisible(b = true) {
@@ -40,17 +44,18 @@ class Cell{
         this.visibleToPlayer = false;
 
         // my meshes
+        const g = this.objectGroup = new THREE.Group();
         this.objects = {
-            wallN: new ObjectSet(),
-            wallS: new ObjectSet(),
-            wallE: new ObjectSet(),
-            wallW: new ObjectSet(),
-            cornerNE: new ObjectSet(),
-            cornerNW: new ObjectSet(),
-            cornerSW: new ObjectSet(),
-            cornerSE: new ObjectSet(),
-            door: new ObjectSet(),
-            main: new ObjectSet(),
+            wallN: new ObjectSet(g),
+            wallS: new ObjectSet(g),
+            wallE: new ObjectSet(g),
+            wallW: new ObjectSet(g),
+            cornerNE: new ObjectSet(g),
+            cornerNW: new ObjectSet(g),
+            cornerSW: new ObjectSet(g),
+            cornerSE: new ObjectSet(g),
+            door: new ObjectSet(g),
+            main: new ObjectSet(g),
         };
     }
 
