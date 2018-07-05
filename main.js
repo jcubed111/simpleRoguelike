@@ -12,105 +12,6 @@ function randChoice(choices) {
     return choices[Math.floor(Math.random() * choices.length)];
 }
 
-class Cell{
-    constructor(map, x, y, type = 'wall') {
-        this.map = map;
-        this.x = x;
-        this.y = y;
-        this.type = type;
-        this.doorOpen = false;
-        this.desiredDoorRotation = 0;
-        this.currentDoorRotation = 0;
-    }
-
-    isWall() {
-        return this.type == 'wall';
-    }
-
-    hasFloor() {
-        return this.type != 'wall' && this.type != 'water' && this.type != 'stairs';
-    }
-
-    cellN() { return this.map.at(this.x, this.y+1); }
-    cellS() { return this.map.at(this.x, this.y-1); }
-    cellE() { return this.map.at(this.x+1, this.y); }
-    cellW() { return this.map.at(this.x-1, this.y); }
-
-    cellNE() { return this.map.at(this.x+1, this.y+1); }
-    cellNW() { return this.map.at(this.x-1, this.y+1); }
-    cellSE() { return this.map.at(this.x+1, this.y-1); }
-    cellSW() { return this.map.at(this.x-1, this.y-1); }
-
-    getWallProfile() {
-        const walls = [
-            this.cellE().isWall(),
-            this.cellN().isWall(),
-            this.cellW().isWall(),
-            this.cellS().isWall()
-        ];
-        return walls.map(w => w ? 'w' : 'e').join('');
-    }
-
-    setDoorOpen(state) {
-        if(this.doorOpen == state) return;
-        this.doorOpen = state;
-        this.desiredDoorRotation += state ? -1 : 1;
-    }
-}
-
-class Map{
-    constructor(width, height, layout = '') {
-        this.width = width;
-        this.height = height;
-
-        if(layout != '') {
-            this.cells = layout.split('\n').map(row => row.trim()).filter(row => row != '').reverse().map((row, y) => {
-                return row.split(' ').map((c, x) => {
-                    const type = ({
-                        '1': 'wall',
-                        '0': 'floor',
-                        'd': 'door',
-                        'w': 'water',
-                        's': 'stairs',
-                    })[c];
-                    return new Cell(this, x, y, type);
-                });
-            });
-        }else{
-            this.cells = [];
-            for(let y=0; y < height; y++) {
-                this.cells.push([]);
-                for(let x=0; x < width; x++) {
-                    this.cells[y][x] = new Cell(this, x, y);
-                }
-            }
-        }
-
-        // set door cells so we can update door angles without having to search through all cells
-        this.movingCells = [];
-        this.forEachCell(c => {
-            if(c.type == 'door') {
-                this.movingCells.push(c);
-            }
-        });
-    }
-
-    at(x, y) {
-        if(x < 0 || y < 0 || x >= this.width || y >= this.height) {
-            return new Cell(this, x, y);
-        }
-        return this.cells[y][x];
-    }
-
-    forEachCell(cb) {
-        this.cells.forEach(row => {
-            row.forEach(cell => {
-                cb(cell);
-            });
-        });
-    }
-}
-
 class Player {
     constructor(world, x, y) {
         this.world = world;
@@ -125,6 +26,7 @@ class Player {
             this.x += dx;
             this.y += dy;
         }else{
+            // can't move, don't do anything
             return false;
         }
 
@@ -135,6 +37,9 @@ class Player {
         if(newCell.type == 'door') {
             newCell.setDoorOpen(true);
         }
+
+        // also update cell visibility
+        this.world.updateCellVisibility();
     }
 }
 
@@ -159,6 +64,68 @@ class World{
         `);
 
         this.player = new Player(this, 1, 7);
+    }
+
+    updateCellVisibility() {
+        this.map.forEachCell(c => {
+            c.wallWVisibleToPlayer =
+            c.wallSVisibleToPlayer =
+            c.wallEVisibleToPlayer =
+            c.wallNVisibleToPlayer = false;
+        });
+
+        const tolerance = 0.05; // amount you can bend your vision around corners. ~= 3deg
+
+        const px = this.player.x;
+        const py = this.player.y;
+        const searchedInterval = new IntervalTree;
+        for(let i=0; i < visibilityEdgeList.length; i++) {
+            const edge = visibilityEdgeList[i];
+            if(!this.map.contains(px + edge.dx, py + edge.dy)) continue;
+            const cell = this.map.at(px + edge.dx, py + edge.dy);
+            if(!searchedInterval.contains(edge.minAngle-tolerance, edge.maxAngle+tolerance)) {
+                cell.setWallVisible(edge.side);
+
+                if(cell.blocksLOS()) {
+                    searchedInterval.insert(edge.minAngle, edge.maxAngle);
+                    if(searchedInterval.contains(-Math.PI, Math.PI)) {
+                        // all view is obscured
+                        break;
+                    }
+                }
+            }
+        }
+
+        // the player can obviously see the cell they're in
+        const playerCell = this.map.at(this.player.x, this.player.y);
+        playerCell.setWallVisible('n');
+        playerCell.setWallVisible('s');
+        playerCell.setWallVisible('e');
+        playerCell.setWallVisible('w');
+
+        // hack to make doors show their adjacent walls
+        this.map.forEachCell(c => {
+            if(c.type == 'door' && c.doorOpen == false && (
+                c.wallWVisibleToPlayer ||
+                c.wallSVisibleToPlayer ||
+                c.wallEVisibleToPlayer ||
+                c.wallNVisibleToPlayer
+            )) {
+                // find the door walls the player might be able to see and make them visible
+                if(c.y >= py && c.cellN().isWall()) { c.cellN().setWallVisible('s'); }
+                if(c.y <= py && c.cellS().isWall()) { c.cellS().setWallVisible('n'); }
+                if(c.x >= px && c.cellE().isWall()) { c.cellE().setWallVisible('w'); }
+                if(c.x <= px && c.cellW().isWall()) { c.cellW().setWallVisible('e'); }
+            }
+        });
+
+        this.map.forEachCell(c => {
+            c.visibleToPlayer =
+                c.wallWVisibleToPlayer ||
+                c.wallSVisibleToPlayer ||
+                c.wallEVisibleToPlayer ||
+                c.wallNVisibleToPlayer;
+        });
     }
 }
 
@@ -189,7 +156,7 @@ class WorldView {
         this.scene.add(this.playerLight);
 
         /* background lighting */
-        this.keyLight = new THREE.DirectionalLight(0xffffcc, 0.5);
+        this.keyLight = new THREE.DirectionalLight(0xffffcc, 0.35);
         this.keyLight.position.set(-7, -10, 10);
         if(!this.hardcoreMode) this.scene.add(this.keyLight);
 
@@ -210,6 +177,28 @@ class WorldView {
         // waterLight2.shadow.camera.near = 0.1;
         // waterLight2.castShadow = true;
         // this.scene.add(waterLight2);
+
+        /* player sprite */
+        var loader = new THREE.FontLoader();
+
+        loader.load('Inconsolata_Medium.json', font => {
+            var geometry = new THREE.TextGeometry('M', {
+                font: font,
+                size: 0.8,
+                height: 0.1,
+                curveSegments: 12,
+                bevelEnabled: false,
+                bevelThickness: 0.05,
+                bevelSize: 0.05,
+                bevelSegments: 2
+            });
+            var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+            this.player = new THREE.Mesh( geometry, material );
+            this.player.scale.y = 0.7;
+            // this.player.scale.x = 1.4;
+            this.player.castShadow = true;
+            this.scene.add( this.player );
+        } );
     }
 
     render(time = 0) {
@@ -219,7 +208,7 @@ class WorldView {
         this.lastFrameTime = time;
 
         // move camera
-        const newCamPos = new Vec3(world.player.x, world.player.y, 0);
+        const newCamPos = new Vec3(this.world.player.x, this.world.player.y, 0);
         this.camPos.lerp(newCamPos, 1 - Math.pow(1 - this.panSpeed, df));
 
         this.camera.position.set(this.camPos.x-0.08, this.camPos.y-1, 6);
@@ -227,6 +216,8 @@ class WorldView {
 
         // move player light
         this.playerLight.position.set(this.camPos.x, this.camPos.y, this.playerLight.position.z);
+        if(this.player) this.player.position.set(this.camPos.x-0.3, this.camPos.y-0.35, 0.2);
+        if(this.player) this.player.position.set(this.world.player.x-0.3, this.world.player.y-0.35, 0.2);
 
         // move environment pieces
         this.world.map.movingCells.forEach(c => {
@@ -234,11 +225,13 @@ class WorldView {
                 case 'door':
                     if(c.currentDoorRotation < c.desiredDoorRotation) {
                         c.currentDoorRotation = Math.min(c.currentDoorRotation + this.doorOpenSpeed * df, c.desiredDoorRotation);
-                        c.doorObject.setRotationFromAxisAngle(new Vec3(0, 0, 1), Math.PI*0.5*c.currentDoorRotation);
                     } else if(c.currentDoorRotation > c.desiredDoorRotation) {
                         c.currentDoorRotation = Math.max(c.currentDoorRotation - this.doorOpenSpeed * df, c.desiredDoorRotation);
-                        c.doorObject.setRotationFromAxisAngle(new Vec3(0, 0, 1), Math.PI*0.5*c.currentDoorRotation);
+                    } else {
+                        break;
                     }
+                    // move the door meshes
+                    c.objects.door.forEach(o => o.setRotationFromAxisAngle(new Vec3(0, 0, 1), Math.PI*0.5*c.currentDoorRotation));
                     break;
             }
         });
@@ -246,29 +239,31 @@ class WorldView {
         this.renderer.render(this.scene, this.camera);
     }
 
-    loadObject(name, position, rot = 0, options = {cast: false, doorFor: null}) {
+    loadObject(name, position, rot = 0, cell = null, cellPartNames = '') {
         var loader = new THREE.GLTFLoader();
 
         loader.load(`objects/${name}.glb`, gltf => {
-            this.scene.add(gltf.scene);
-            gltf.scene.rotateZ(rot * Math.PI/2.0);
+            const object = gltf.scene;
+            this.scene.add(object);
+            object.rotateZ(rot * Math.PI/2.0);
 
             function setShadowProps(thing) {
                 if(thing.userData.cast > 0) {
                     thing.castShadow = true;
-                    // thing.visible = false;
                 }
                 thing.receiveShadow = true;
                 thing.children.forEach(setShadowProps);
             }
-            setShadowProps(gltf.scene);
+            setShadowProps(object);
 
-            gltf.scene.position.x = position.x;
-            gltf.scene.position.y = position.y;
-            gltf.scene.position.z = position.z;
+            object.position.x = position.x;
+            object.position.y = position.y;
+            object.position.z = position.z;
 
-            if(options.doorFor) {
-                options.doorFor.doorObject = gltf.scene;
+            if(cell) {
+                cellPartNames.split(' ').forEach(n => {
+                    cell.objects[n].push(object);
+                });
             }
         });
     }
@@ -280,49 +275,49 @@ class WorldView {
                 const wallProfile = c.getWallProfile();
                 switch(wallProfile) {
                     case 'eeee':
-                        this.loadObject('walls4', new THREE.Vector3(c.x, c.y, 0), randInt(0, 4), {cast: true});
+                        this.loadObject('walls4', new THREE.Vector3(c.x, c.y, 0), randInt(0, 4), c, 'wallE wallN wallW wallS');
                         break;
                     case 'weee':
-                        this.loadObject('walls3', new THREE.Vector3(c.x, c.y, 0), 0, {cast: true});
+                        this.loadObject('walls3', new THREE.Vector3(c.x, c.y, 0), 0, c, 'wallN wallW wallS');
                         break;
                     case 'ewee':
-                        this.loadObject('walls3', new THREE.Vector3(c.x, c.y, 0), 1, {cast: true});
+                        this.loadObject('walls3', new THREE.Vector3(c.x, c.y, 0), 1, c, 'wallE wallW wallS');
                         break;
                     case 'eewe':
-                        this.loadObject('walls3', new THREE.Vector3(c.x, c.y, 0), 2, {cast: true});
+                        this.loadObject('walls3', new THREE.Vector3(c.x, c.y, 0), 2, c, 'wallE wallN wallS');
                         break;
                     case 'eeew':
-                        this.loadObject('walls3', new THREE.Vector3(c.x, c.y, 0), 3, {cast: true});
+                        this.loadObject('walls3', new THREE.Vector3(c.x, c.y, 0), 3, c, 'wallE wallN wallW');
                         break;
                     case 'wewe':
-                        this.loadObject('walls2a', new THREE.Vector3(c.x, c.y, 0), randInt(0, 1) * 2, {cast: true});
+                        this.loadObject('walls2a', new THREE.Vector3(c.x, c.y, 0), randInt(0, 1) * 2, c, 'wallN wallS');
                         break;
                     case 'ewew':
-                        this.loadObject('walls2a', new THREE.Vector3(c.x, c.y, 0), randInt(0, 1) * 2 + 1, {cast: true});
+                        this.loadObject('walls2a', new THREE.Vector3(c.x, c.y, 0), randInt(0, 1) * 2 + 1, c, 'wallE wallW');
                         break;
                     case 'wwee':
-                        this.loadObject('walls2b', new THREE.Vector3(c.x, c.y, 0), 0, {cast: true});
+                        this.loadObject('walls2b', new THREE.Vector3(c.x, c.y, 0), 0, c, 'wallW wallS');
                         break;
                     case 'ewwe':
-                        this.loadObject('walls2b', new THREE.Vector3(c.x, c.y, 0), 1, {cast: true});
+                        this.loadObject('walls2b', new THREE.Vector3(c.x, c.y, 0), 1, c, 'wallE wallS');
                         break;
                     case 'eeww':
-                        this.loadObject('walls2b', new THREE.Vector3(c.x, c.y, 0), 2, {cast: true});
+                        this.loadObject('walls2b', new THREE.Vector3(c.x, c.y, 0), 2, c, 'wallE wallN');
                         break;
                     case 'weew':
-                        this.loadObject('walls2b', new THREE.Vector3(c.x, c.y, 0), 3, {cast: true});
+                        this.loadObject('walls2b', new THREE.Vector3(c.x, c.y, 0), 3, c, 'wallN wallW');
                         break;
                     case 'ewww':
-                        this.loadObject('walls1', new THREE.Vector3(c.x, c.y, 0), 0, {cast: true});
+                        this.loadObject('walls1', new THREE.Vector3(c.x, c.y, 0), 0, c, 'wallE');
                         break;
                     case 'weww':
-                        this.loadObject('walls1', new THREE.Vector3(c.x, c.y, 0), 1, {cast: true});
+                        this.loadObject('walls1', new THREE.Vector3(c.x, c.y, 0), 1, c, 'wallN');
                         break;
                     case 'wwew':
-                        this.loadObject('walls1', new THREE.Vector3(c.x, c.y, 0), 2, {cast: true});
+                        this.loadObject('walls1', new THREE.Vector3(c.x, c.y, 0), 2, c, 'wallW');
                         break;
                     case 'wwwe':
-                        this.loadObject('walls1', new THREE.Vector3(c.x, c.y, 0), 3, {cast: true});
+                        this.loadObject('walls1', new THREE.Vector3(c.x, c.y, 0), 3, c, 'wallS');
                         break;
                 }
                 // add in missing corners
@@ -332,9 +327,10 @@ class WorldView {
                     !c.cellSW().isWall() && c.cellS().isWall() && c.cellW().isWall(),
                     !c.cellSE().isWall() && c.cellS().isWall() && c.cellE().isWall(),
                 ].forEach((needsCorner, i) => {
+                    const cornerNames = ['cornerNE', 'cornerNW', 'cornerSW', 'cornerSE'];
                     if(needsCorner) {
                         const l = randChoice(['a', 'b', 'c']);
-                        this.loadObject('walls0'+l, new THREE.Vector3(c.x, c.y, 0), i, {cast: true});
+                        this.loadObject('walls0'+l, new THREE.Vector3(c.x, c.y, 0), i, c, cornerNames[i]);
                     }
                 });
             }
@@ -342,15 +338,15 @@ class WorldView {
             if(c.hasFloor()) {
                 // add floor
                 const l = randChoice(['a', 'b', 'c']);
-                this.loadObject('floor0'+l, new THREE.Vector3(c.x, c.y, 0), randInt(0, 4));
+                this.loadObject('floor0'+l, new THREE.Vector3(c.x, c.y, 0), randInt(0, 4), c, 'main');
             }
 
             if(c.type == 'water') {
                 // add floor
                 const l = randChoice(['a', 'b', 'c']);
-                this.loadObject('floor0'+l, new THREE.Vector3(c.x, c.y, -0.5), randInt(0, 4));
+                this.loadObject('floor0'+l, new THREE.Vector3(c.x, c.y, -0.5), randInt(0, 4), c, 'main');
                 // add water surface
-                this.loadObject('water', new THREE.Vector3(c.x, c.y, 0), 0);
+                this.loadObject('water', new THREE.Vector3(c.x, c.y, 0), 0, c, 'main');
                 // add below water walls
                 [
                     c.cellE().type != 'water',
@@ -359,7 +355,7 @@ class WorldView {
                     c.cellS().type != 'water',
                 ].forEach((needsWall, i) => {
                     if(needsWall) {
-                        this.loadObject('belowWaterWall', new THREE.Vector3(c.x, c.y, 0), i, {cast: true});
+                        this.loadObject('belowWaterWall', new THREE.Vector3(c.x, c.y, 0), i, c, 'main');
                     }
                 });
             }
@@ -375,32 +371,27 @@ class WorldView {
                 } else if(!c.cellS().isWall()) {
                     r = 1;
                 }
-                this.loadObject('stairs', new THREE.Vector3(c.x, c.y, 0), r, {cast: true});
+                this.loadObject('stairs', new THREE.Vector3(c.x, c.y, 0), r, c, 'main');
             }
 
             if(c.type == 'door') {
-                this.loadObject('doorFrame', new THREE.Vector3(c.x, c.y, 0), 2+c.cellE().isWall(), {cast: true});
+                this.loadObject('doorFrame', new THREE.Vector3(c.x, c.y, 0), 2+c.cellE().isWall(), c, 'main');
+
+                let doorPos;
                 if(c.cellE().isWall()) {
                     c.desiredDoorRotation = c.currentDoorRotation = 3;
-                    this.loadObject('door',
-                        new THREE.Vector3(c.x-0.25, c.y, 0),
-                        c.currentDoorRotation,
-                        {
-                            cast: true,
-                            doorFor: c,
-                        }
-                    );
+                    doorPos = new THREE.Vector3(c.x-0.25, c.y, 0);
                 }else{
                     c.desiredDoorRotation = c.currentDoorRotation = 2;
-                    this.loadObject('door',
-                        new THREE.Vector3(c.x, c.y+0.25, 0),
-                        c.currentDoorRotation,
-                        {
-                            cast: true,
-                            doorFor: c,
-                        }
-                    );
+                    doorPos = new THREE.Vector3(c.x, c.y+0.25, 0);
                 }
+
+                this.loadObject('door',
+                    doorPos,
+                    c.currentDoorRotation,
+                    c,
+                    'door',
+                );
             }
         });
     }
