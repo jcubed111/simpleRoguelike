@@ -166,13 +166,14 @@ class WorldView {
         if(!this.hardcoreMode) this.scene.add(this.fillLight);
 
         /* environment lighting */
+        // TODO: these are slooooooow, so hide them when they're off screen
         let waterLight = this.waterLight = new THREE.RectAreaLight(0x00ffaa, 1.5, 2, 3);
         waterLight.position.set(6, 8.5, 0.9);
         waterLight.setRotationFromAxisAngle(new Vec3(1, 0, 0), Math.PI); // point down
         this.scene.add(waterLight);
 
-        let waterLight2 = this.waterLight2 = new THREE.RectAreaLight(0x00ffaa, 1.5, 4, 4);
-        waterLight2.position.set(11, 3, 0.9);
+        let waterLight2 = this.waterLight2 = new THREE.RectAreaLight(0x00ffaa, 1.5, 4, 3);
+        waterLight2.position.set(11, 3.5, 0.9);
         waterLight2.setRotationFromAxisAngle(new Vec3(1, 0, 0), Math.PI); // point down
         this.scene.add(waterLight2);
 
@@ -193,17 +194,17 @@ class WorldView {
             var material = new THREE.MeshBasicMaterial( { color: 0xdddddd } );
             this.player = new THREE.Mesh( geometry, material );
             this.player.scale.y = 0.7;
-            // this.player.scale.x = 1.4;
+            this.player.scale.x = 1.0;
             this.player.castShadow = true;
             this.scene.add( this.player );
         } );
     }
 
     screenCoordToWorldCoord(x, y) {
-        let v = new Vec3(x, y, 0);
-        v.unproject(this.camera);
-        let ray = v.clone().sub(this.camera.position); // from camera to the screen coord point
-        let final = this.camera.position.clone().addScaledVector(ray, -this.camera.position.z / ray.z);
+        var pos = new Vec3(x, y, 0.5);
+        pos.unproject(this.camera);
+        var ray = pos.sub(this.camera.position);
+        var final = this.camera.position.clone().addScaledVector(ray, -this.camera.position.z / ray.z);
         return final;
     }
 
@@ -242,8 +243,28 @@ class WorldView {
             }
         });
 
+        // update the camera matrices or screenCoordToWorldCoord flips out
+        this.camera.updateMatrix();
+        this.camera.updateMatrixWorld();
 
+        // find bounds of camera view
+        let bounds = [
+            this.screenCoordToWorldCoord(1, 1),
+            this.screenCoordToWorldCoord(-1, 1),
+            this.screenCoordToWorldCoord(-1, -1),
+            this.screenCoordToWorldCoord(1, -1)
+        ];
+        const xmin = Math.round(Math.min(...bounds.map(b => b.x)));
+        const xmax = Math.round(Math.max(...bounds.map(b => b.x)));
+        const ymin = Math.round(Math.min(...bounds.map(b => b.y)));
+        const ymax = Math.round(Math.max(...bounds.map(b => b.y)));
 
+        // hide cells that aren't in bounds
+        this.world.map.forEachCell(c => {
+            c.objectGroup.visible = c.x >= xmin && c.x <= xmax && c.y >= ymin && c.y <= ymax;
+        });
+
+        // render
         this.renderer.render(this.scene, this.camera);
     }
 
