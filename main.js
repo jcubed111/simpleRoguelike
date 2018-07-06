@@ -34,7 +34,7 @@ class Player {
     tryToMove(dx, dy) {
         const oldCell = this.world.map.at(this.x, this.y);
         const newCell = this.world.map.at(this.x + dx, this.y + dy);
-        if(!newCell.isWall()) {
+        if(!newCell.isWall() && !newCell.isPit()) {
             this.x += dx;
             this.y += dy;
         }else{
@@ -72,6 +72,24 @@ class World{
         //     1 0 1 1 0 0 0 0 1 0 w w w 0 1
         //     1 0 0 0 0 1 1 0 d 0 0 0 0 0 1
         //     1 1 1 1 1 1 1 1 1 1 1 0 0 0 1
+        //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+        // `);
+
+        // this.map = new Map(15, 15, `
+        //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
+        //     1 1 0 1 0 1 0 1 0 1 0 1 0 1 1
+        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
+        //     1 1 0 1 0 1 0 1 0 1 0 1 0 1 1
+        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
+        //     1 1 0 1 0 1 0 1 0 1 0 1 0 1 1
+        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
+        //     1 1 0 1 0 1 0 1 0 1 0 1 0 1 1
+        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
+        //     1 1 0 1 0 1 0 1 0 1 0 1 0 1 1
+        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
+        //     1 1 0 1 0 1 0 1 0 1 0 1 0 1 1
+        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
         //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         // `);
 
@@ -174,7 +192,7 @@ class WorldView {
         document.body.appendChild(this.renderer.domElement);
 
         /* player light */
-        this.playerLight = new THREE.PointLight(0xff9933, this.hardcoreMode ? 3.0 : 2.5, 7, 0.8);
+        this.playerLight = new THREE.PointLight(0xff9933, this.hardcoreMode ? 3.0 : 1.0, 7, 0.8);
         this.playerLight.position.set(0, 0, 0.8);
         this.playerLight.castShadow = true;
         this.playerLight.shadow.camera.far = this.playerLight.distance;
@@ -203,15 +221,6 @@ class WorldView {
             // l.shadow.camera.near = 0.01;
             // l.shadow.camera.far = 5.0;
         });
-        // let waterLight = this.waterLight = new THREE.RectAreaLight(0x00ffaa, 1.5, 2, 3);
-        // waterLight.position.set(6, 8.5, 0.9);
-        // waterLight.setRotationFromAxisAngle(new Vec3(1, 0, 0), Math.PI); // point down
-        // this.scene.add(waterLight);
-
-        // let waterLight2 = this.waterLight2 = new THREE.RectAreaLight(0x00ffaa, 1.5, 4, 3);
-        // waterLight2.position.set(11, 3.5, 0.9);
-        // waterLight2.setRotationFromAxisAngle(new Vec3(1, 0, 0), Math.PI); // point down
-        // this.scene.add(waterLight2);
 
         /* player sprite */
         var loader = new THREE.FontLoader();
@@ -259,8 +268,7 @@ class WorldView {
 
         // move player light
         this.playerLight.position.set(this.camPos.x, this.camPos.y, this.playerLight.position.z);
-        if(this.player) this.player.position.set(this.camPos.x-0.3, this.camPos.y-0.35, 0.2);
-        if(this.player) this.player.position.set(this.world.player.x-0.3, this.world.player.y-0.35, 0.2);
+        if(this.player) this.player.position.set(this.world.player.x-0.3, this.world.player.y-0.25, 0.2);
 
         // update dynamic cells
         let lightSpecs = [];
@@ -454,23 +462,26 @@ class WorldView {
                 this.loadObject('floor0'+l, new THREE.Vector3(c.x, c.y, 0), randInt(0, 4), c, 'main');
             }
 
+            if(c.type == 'water' || c.type == 'pit') {
+                // add below ground walls
+                [
+                    c.cellE().type != 'water' && c.cellE().type != 'pit',
+                    c.cellN().type != 'water' && c.cellN().type != 'pit',
+                    c.cellW().type != 'water' && c.cellW().type != 'pit',
+                    c.cellS().type != 'water' && c.cellS().type != 'pit',
+                ].forEach((needsWall, i) => {
+                    if(needsWall) {
+                        this.loadObject('belowWaterWall', new THREE.Vector3(c.x, c.y, 0), i, c, 'main');
+                    }
+                });
+            }
+
             if(c.type == 'water') {
                 // add floor
                 const l = randChoice(['a', 'b', 'c']);
                 this.loadObject('floor0'+l, new THREE.Vector3(c.x, c.y, -0.5), randInt(0, 4), c, 'main');
                 // add water surface
                 this.loadObject('water', new THREE.Vector3(c.x, c.y, -0.1), 0, c, 'main');
-                // add below water walls
-                [
-                    c.cellE().type != 'water',
-                    c.cellN().type != 'water',
-                    c.cellW().type != 'water',
-                    c.cellS().type != 'water',
-                ].forEach((needsWall, i) => {
-                    if(needsWall) {
-                        this.loadObject('belowWaterWall', new THREE.Vector3(c.x, c.y, 0), i, c, 'main');
-                    }
-                });
             }
 
             if(c.type == 'stairs') {
@@ -508,17 +519,17 @@ class WorldView {
             }
 
             // decoration
-            if(c.torchE) {
-                this.loadObject('torch', new THREE.Vector3(c.x, c.y, 0), 0, c, 'wallE');
+            if(c.wallDecorE != 'none') {
+                this.loadObject(c.wallDecorE, new THREE.Vector3(c.x, c.y, 0), 0, c, 'wallE');
             }
-            if(c.torchN) {
-                this.loadObject('torch', new THREE.Vector3(c.x, c.y, 0), 1, c, 'wallN');
+            if(c.wallDecorN != 'none') {
+                this.loadObject(c.wallDecorN, new THREE.Vector3(c.x, c.y, 0), 1, c, 'wallN');
             }
-            if(c.torchW) {
-                this.loadObject('torch', new THREE.Vector3(c.x, c.y, 0), 2, c, 'wallW');
+            if(c.wallDecorW != 'none') {
+                this.loadObject(c.wallDecorW, new THREE.Vector3(c.x, c.y, 0), 2, c, 'wallW');
             }
-            if(c.torchS) {
-                this.loadObject('torch', new THREE.Vector3(c.x, c.y, 0), 3, c, 'wallS');
+            if(c.wallDecorS != 'none') {
+                this.loadObject(c.wallDecorS, new THREE.Vector3(c.x, c.y, 0), 3, c, 'wallS');
             }
         });
 

@@ -40,10 +40,10 @@ class Cell{
         this.room = null;
         this.lightSpec = null;
 
-        this.torchN = false;
-        this.torchS = false;
-        this.torchE = false;
-        this.torchW = false;
+        this.wallDecorN = 'none';
+        this.wallDecorS = 'none';
+        this.wallDecorE = 'none';
+        this.wallDecorW = 'none';
 
         this.wallWVisibleToPlayer = false;
         this.wallSVisibleToPlayer = false;
@@ -71,8 +71,12 @@ class Cell{
         return this.type == 'wall';
     }
 
+    isPit() {
+        return this.type == 'pit';
+    }
+
     hasFloor() {
-        return this.type != 'wall' && this.type != 'water' && this.type != 'stairs';
+        return this.type != 'wall' && this.type != 'water' && this.type != 'stairs' && this.type != 'pit';
     }
 
     blocksLOS() {
@@ -310,8 +314,9 @@ class Room{
     buildPart2() {
         // part of room that gets built after there are doors
         this.type = randChoice([
-            'plain', 'plain',
+            'plain', 'plain', 'plain',
             'water',
+            // 'pit',
         ]);
         this['buildAs_'+this.type]();
     }
@@ -321,7 +326,7 @@ class Room{
         const genType = randChoice([
             'genWaterPool',
             'genWaterVoronoi',
-            'genWaterRiver',
+            'genRiver',
         ]);
         this[genType]();
 
@@ -360,7 +365,7 @@ class Room{
         }
     }
 
-    genWaterRiver() {
+    genRiver(riverType = 'water') {
         const map = this.map;
 
         // choose river direction
@@ -383,7 +388,7 @@ class Room{
         // build the river
         while(startCell.room == this) {
             if(startCell.type == 'floor') {
-                startCell.type = 'water';
+                startCell.type = riverType;
             }
             startCell = startCell[randChoice([
                 'cell' + nextCellChoices[0],
@@ -397,6 +402,26 @@ class Room{
 
     buildAs_plain() {
         // pass, just a plain room
+    }
+
+    buildAs_pit() {
+        const map = this.map;
+
+        this.genRiver('pit');
+
+        for(let x = this.x1+1; x < this.x2-1; x++) {
+            for(let y = this.y1+1; y < this.y2-1; y++) {
+                const c = map.at(x, y);
+                if(c.type != 'pit') continue;
+                if(c.cellN().type == 'door'
+                    || c.cellS().type == 'door'
+                    || c.cellE().type == 'door'
+                    || c.cellW().type == 'door'
+                ) {
+                    c.type = 'floor';
+                }
+            }
+        }
     }
 }
 
@@ -438,6 +463,7 @@ class ZoneTree{
 
 class Map{
     constructor(width, height, layout = '') {
+        this.rooms = [];
         this.width = width;
         this.height = height;
 
@@ -503,8 +529,8 @@ class Map{
         while(failures < w*h*0.1) {
             let roomX = randInt(0, w);
             let roomY = randInt(0, h);
-            let roomW = randInt(5, 12); // includes walls
-            let roomH = randInt(5, 12); // includes walls
+            let roomW = randInt(5, 10); // includes walls
+            let roomH = randInt(5, 10); // includes walls
             const clear = this.checkClear(roomX, roomY, roomW, roomH);
             if(clear) {
                 if(rand(0, 1) < 0.2) {
@@ -638,7 +664,7 @@ class Map{
         // lighting zone map
         const lightInZone = {};
 
-        // add hallway torches
+        // add hallway lighting fixtures
         this.forEachCell(c => {
             if(c.room == null && c.type == 'floor') {
                 const zone = Math.floor(c.x/5) + ' ' + Math.floor(c.y/5);
@@ -654,16 +680,33 @@ class Map{
 
                 if(!oneIn(5)) return;
                 const [wallCell, side, lx, ly] = randChoice(adjacentWalls);
+                const lightType = randChoice([
+                    'torch', 'torch', 'torch',
+                    'mushroomGrove'
+                ]);
 
-                // add a torch to the wall
-                wallCell['torch' + side] = true;
-                c.lightSpec = new CellPointLightSpec(
-                    new Vec3(c.x+lx, c.y+ly, 0.8),
-                    0xff7700,
-                    3.0,
-                    1.5,
-                    1.4
-                );
+                // add a lighting decoration to the wall
+                wallCell['wallDecor' + side] = lightType;
+                switch(lightType) {
+                    case 'torch':
+                        c.lightSpec = new CellPointLightSpec(
+                            new Vec3(c.x+lx, c.y+ly, 0.8),
+                            0xff7700,
+                            3.0,
+                            1.5,
+                            1.4
+                        );
+                        break;
+                    case 'mushroomGrove':
+                        c.lightSpec = new CellPointLightSpec(
+                            new Vec3(c.x+lx, c.y+ly, 0.2),
+                            0xff11cc,
+                            2.0,
+                            1.5,
+                            1.4
+                        );
+                        break;
+                }
                 lightInZone[zone] = true;
             }
         });
@@ -761,6 +804,7 @@ class Map{
                     wall: '#',
                     floor: '.',
                     stairs: 's',
+                    pit: '%',
                 })[c.type];
             }).join(' ');
         }).reverse().join('\n');
