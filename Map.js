@@ -185,6 +185,10 @@ class Cell{
         this.doorOpen = state;
         this.desiredDoorRotation += state ? -1 : 1;
     }
+
+    occupiedBy() {
+        return _.find(this.map.characters, e => e.x == this.x && e.y == this.y) || false;
+    }
 }
 
 class RoomLight{
@@ -466,6 +470,7 @@ class Map{
         this.rooms = [];
         this.width = width;
         this.height = height;
+        this.characters = [];
 
         if(layout != '') {
             this.cells = layout.split('\n').map(row => row.trim()).filter(row => row != '').reverse().map((row, y) => {

@@ -24,35 +24,10 @@ function oneIn(n) {
     return Math.random()*n < 1;
 }
 
-class Player {
-    constructor(world, x, y) {
-        this.world = world;
-        this.x = x;
-        this.y = y;
-    }
-
-    tryToMove(dx, dy) {
-        const oldCell = this.world.map.at(this.x, this.y);
-        const newCell = this.world.map.at(this.x + dx, this.y + dy);
-        if(!newCell.isWall() && !newCell.isPit()) {
-            this.x += dx;
-            this.y += dy;
-        }else{
-            // can't move, don't do anything
-            return false;
-        }
-
-        // if we moved, set door states
-        if(oldCell.type == 'door') {
-            oldCell.setDoorOpen(false);
-        }
-        if(newCell.type == 'door') {
-            newCell.setDoorOpen(true);
-        }
-
-        // also update cell visibility
-        this.world.updateCellVisibility();
-    }
+async function delay(ms) {
+    await new Promise(resolve => {
+        setTimeout(resolve, ms);
+    });
 }
 
 class World{
@@ -75,31 +50,39 @@ class World{
         //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         // `);
 
-        // this.map = new Map(15, 15, `
-        //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
-        //     1 1 0 1 0 1 0 1 0 1 0 1 0 1 1
-        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
-        //     1 1 0 1 0 1 0 1 0 1 0 1 0 1 1
-        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
-        //     1 1 0 1 0 1 0 1 0 1 0 1 0 1 1
-        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
-        //     1 1 0 1 0 1 0 1 0 1 0 1 0 1 1
-        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
-        //     1 1 0 1 0 1 0 1 0 1 0 1 0 1 1
-        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
-        //     1 1 0 1 0 1 0 1 0 1 0 1 0 1 1
-        //     1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
-        //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-        // `);
+        this.map = new Map(15, 15, `
+            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+            1 1 1 1 1 1 1 1 0 0 0 0 1 1 1
+            1 1 1 1 1 1 1 1 0 0 0 0 1 1 1
+            1 1 1 1 1 1 1 1 0 0 0 0 1 1 1
+            1 1 1 1 1 1 1 1 0 0 0 0 1 1 1
+            1 1 1 1 1 1 1 1 1 d 1 1 1 1 1
+            1 1 1 1 1 1 1 1 1 0 1 1 1 1 1
+            1 1 1 1 1 1 1 1 1 0 1 0 0 0 1
+            1 1 1 1 1 1 1 1 1 0 d 0 0 0 1
+            1 1 1 1 1 1 1 1 1 1 1 0 0 0 1
+            1 1 1 1 1 1 1 1 1 1 1 0 0 0 1
+            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+        `);
 
-        this.map = new Map(75, 75);
+        // this.map = new Map(75, 75);
 
-        this.player = new Player(this, 1, 7);
+        this.player = new Player(this, 'orc', 'fighter');
 
-        const startingCell = randChoice(this.map.filterCells(c => c.type == 'floor'));
-        this.player.x = startingCell.x;
-        this.player.y = startingCell.y;
+        this.map.characters.push(this.player);
+        this.map.characters.push(new enemyTypes.Kobold(this, 1));
+
+        // const startingCell = randChoice(this.map.filterCells(c => c.type == 'floor'));
+        // this.player.x = startingCell.x;
+        // this.player.y = startingCell.y;
+
+        this.player.x = 8;
+        this.player.y = 12;
+        this.map.characters[1].x = 11;
+        this.map.characters[1].y = 12;
 
         this.updateCellVisibility();
     }
@@ -168,6 +151,25 @@ class World{
                 c.wallNVisibleToPlayer;
         });
     }
+
+    async doAiTurns(delayTime = 0) {
+        for(let i=0; i < this.map.characters.length; i++) {
+            const enemy = this.map.characters[i];
+            if(!enemy.isEnemy() || enemy.dead) continue;
+
+            let delayAfterTurn = enemy.canSeePlayer(); // delay if we see enemy at start of it's turn
+            enemy.takeAiTurn();
+            delayAfterTurn = delayAfterTurn || enemy.canSeePlayer(); // also delay if we see enemy at end of it's turn
+
+            if(delayAfterTurn && delayTime > 0) {
+                await delay(delayTime);
+            }
+        }
+    }
+
+    log(text) {
+        console.info("%c " + text, 'background: #eee; color: #1155ff');
+    }
 }
 
 class WorldView {
@@ -221,28 +223,6 @@ class WorldView {
             // l.shadow.camera.near = 0.01;
             // l.shadow.camera.far = 5.0;
         });
-
-        /* player sprite */
-        var loader = new THREE.FontLoader();
-
-        loader.load('Inconsolata_Medium.json', font => {
-            var geometry = new THREE.TextGeometry('@', {
-                font: font,
-                size: 0.8,
-                height: 0.1,
-                curveSegments: 12,
-                bevelEnabled: false,
-                bevelThickness: 0.05,
-                bevelSize: 0.05,
-                bevelSegments: 2
-            });
-            var material = new THREE.MeshBasicMaterial({color: 0xdddddd});
-            this.player = new THREE.Mesh(geometry, material);
-            this.player.scale.y = 0.7;
-            this.player.scale.x = 1.0;
-            this.player.castShadow = true;
-            this.scene.add(this.player);
-        } );
     }
 
     screenCoordToWorldCoord(x, y) {
@@ -268,7 +248,6 @@ class WorldView {
 
         // move player light
         this.playerLight.position.set(this.camPos.x, this.camPos.y, this.playerLight.position.z);
-        if(this.player) this.player.position.set(this.world.player.x-0.3, this.world.player.y-0.25, 0.2);
 
         // update dynamic cells
         let lightSpecs = [];
@@ -331,6 +310,16 @@ class WorldView {
             }
         });
 
+        // move characters
+        this.world.map.characters.forEach(character => {
+            if(!character.mesh) return;
+            const visibleToPlayer = !character.dead && character.getCell().visibleToPlayer;
+            character.mesh.visible = visibleToPlayer;
+            if(visibleToPlayer) {
+                character.mesh.position.set(character.x-0.3, character.y-0.25, 0.2);
+            }
+        });
+
         // render
         this.renderer.render(this.scene, this.camera);
     }
@@ -380,6 +369,34 @@ class WorldView {
             // otherwise, add manually
             this.scene.add(object);
         }
+    }
+
+    loadSprite(thing, icon, color = 0xdddddd) {
+        // icon is the character used to represent thing thing. eg: @
+        var loader = new THREE.FontLoader();
+
+        loader.load('Inconsolata_Medium.json', font => {
+            var geometry = new THREE.TextGeometry(icon, {
+                font: font,
+                size: 0.8,
+                height: 0.1,
+                curveSegments: 12,
+                bevelEnabled: false,
+                bevelThickness: 0.05,
+                bevelSize: 0.05,
+                bevelSegments: 2
+            });
+            var material = new THREE.MeshStandardMaterial({
+                color: color,
+                emissive: color,
+                emissiveIntensity: 0.5,
+            });
+            thing.mesh = new THREE.Mesh(geometry, material);
+            thing.mesh.scale.y = 0.7;
+            thing.mesh.scale.x = 1.0;
+            thing.mesh.castShadow = true;
+            this.scene.add(thing.mesh);
+        } );
     }
 
     loadLevelObjects() {
@@ -539,6 +556,11 @@ class WorldView {
                 this.scene.add(room.light.light);
             }
         });
+
+        // add chracter sprites
+        this.world.map.characters.forEach(character => {
+            this.loadSprite(character, character.icon, character.color);
+        });
     }
 }
 
@@ -563,6 +585,7 @@ async function start() {
     await view.loadObjectToCache('door');
     await view.loadObjectToCache('water');
     await view.loadObjectToCache('torch');
+    await view.loadObjectToCache('mushroomGrove');
 
     view.loadLevelObjects();
     view.render();
@@ -570,6 +593,8 @@ async function start() {
 start();
 
 window.addEventListener('keydown', e => {
+    if(!world.player.myTurn) return;
+
     switch(e.code) {
         case 'KeyW':
         case 'ArrowUp':

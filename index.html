@@ -2,51 +2,15 @@
 <html>
 <head>
     <title>Simple Roguelike</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-        }
-        canvas {
-            width: 100%;
-            height: 100%;
-        }
-
-        #mapView{
-            position: fixed;
-            left: 0;
-            top: 0;
-            z-index: 5;
-            overflow: hidden;
-            width: 15px;
-            height: 15px;
-        }
-        #mapView:hover{
-            width: auto;
-            height: auto;
-        }
-        #mapView .row {
-            font-size: 0;
-        }
-        #mapView .cell {
-            display: inline-block;
-            width: 5px;
-            height: 5px;
-        }
-        .cell.door   { background: #d84; }
-        .cell.water  { background: #0af; }
-        .cell.blank  { background: #a33; }
-        .cell.wall   { background: #000; }
-        .cell.floor  { background: #ccc; }
-        .cell.stairs { background: #2f2; }
-        .cell.pit    { background: #833; }
-    </style>
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
     <div id="mapView"></div>
+    <div id="logView"></div>
     <script>
         document.getElementById('mapView').addEventListener('click', e => {
             if(!e.target.classList.contains('cell')) return;
+            if(!world.player.myTurn) return;
             world.player.tryToMove(
                 e.target.dataset.x - world.player.x,
                 e.target.dataset.y - world.player.y
@@ -59,6 +23,13 @@
     <script src="GLTFLoader.js"></script>
     <script src="IntervalTree.js"></script>
     <script src="visibilityEdgeList.js"></script>
+    <script src="MinHeap.js"></script>
+
+    <script src="Weapon.js"></script>
+    <script src="Spell.js"></script>
+    <script src="Character.js"></script>
+    <script src="Enemy.js"></script>
+    <script src="Player.js"></script>
     <script src="Map.js"></script>
     <script src="main.js"></script>
 </body>
