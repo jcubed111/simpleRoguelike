@@ -38,6 +38,9 @@ class Character{
 
         // inventory
         this.inventory = [];
+
+        // view and animation properties
+        this.attackOffset = new THREE.Vector2(0, 0); // an offset that gets added to your position to animate attacks
     }
 
     getCell() {
@@ -121,6 +124,11 @@ class Character{
     }
 
     meleeAttack(enemy) {
+        // add attackOffset
+        this.attackOffset.x += (enemy.x - this.x) * 0.25;
+        this.attackOffset.y += (enemy.y - this.y) * 0.25;
+
+        // do attack logic
         const weapon = this.weapon;
         if(weapon && weapon.melee) {
             // check hit

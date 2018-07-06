@@ -316,7 +316,9 @@ class WorldView {
             const visibleToPlayer = !character.dead && character.getCell().visibleToPlayer;
             character.mesh.visible = visibleToPlayer;
             if(visibleToPlayer) {
-                character.mesh.position.set(character.x-0.3, character.y-0.25, 0.2);
+                const offset = character.attackOffset;
+                character.mesh.position.set(character.x-0.3 + offset.x, character.y-0.25 + offset.y, 0.2);
+                offset.clampLength(0, offset.length() * Math.pow(0.8, df));
             }
         });
 
