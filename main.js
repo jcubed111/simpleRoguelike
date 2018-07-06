@@ -12,6 +12,10 @@ function randChoice(choices) {
     return choices[Math.floor(Math.random() * choices.length)];
 }
 
+function oneIn(n) {
+    return Math.random()*n < 1;
+}
+
 class Player {
     constructor(world, x, y) {
         this.world = world;
@@ -63,7 +67,7 @@ class World{
         //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         // `);
 
-        this.map = new Map(35, 35);
+        this.map = new Map(150, 150);
 
         this.player = new Player(this, 1, 7);
 
@@ -144,6 +148,8 @@ class WorldView {
         this.hardcoreMode = false; // whether to only light the dungeon you can see
         this.cameraZ = 5;
 
+        this.objectLoadCache = {};
+
         this.world = world;
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -173,16 +179,15 @@ class WorldView {
         if(!this.hardcoreMode) this.scene.add(this.fillLight);
 
         /* environment lighting */
-        // TODO: these are slooooooow, so hide them when they're off screen
-        let waterLight = this.waterLight = new THREE.RectAreaLight(0x00ffaa, 1.5, 2, 3);
-        waterLight.position.set(6, 8.5, 0.9);
-        waterLight.setRotationFromAxisAngle(new Vec3(1, 0, 0), Math.PI); // point down
-        this.scene.add(waterLight);
+        // let waterLight = this.waterLight = new THREE.RectAreaLight(0x00ffaa, 1.5, 2, 3);
+        // waterLight.position.set(6, 8.5, 0.9);
+        // waterLight.setRotationFromAxisAngle(new Vec3(1, 0, 0), Math.PI); // point down
+        // this.scene.add(waterLight);
 
-        let waterLight2 = this.waterLight2 = new THREE.RectAreaLight(0x00ffaa, 1.5, 4, 3);
-        waterLight2.position.set(11, 3.5, 0.9);
-        waterLight2.setRotationFromAxisAngle(new Vec3(1, 0, 0), Math.PI); // point down
-        this.scene.add(waterLight2);
+        // let waterLight2 = this.waterLight2 = new THREE.RectAreaLight(0x00ffaa, 1.5, 4, 3);
+        // waterLight2.position.set(11, 3.5, 0.9);
+        // waterLight2.setRotationFromAxisAngle(new Vec3(1, 0, 0), Math.PI); // point down
+        // this.scene.add(waterLight2);
 
         /* player sprite */
         var loader = new THREE.FontLoader();
@@ -198,12 +203,12 @@ class WorldView {
                 bevelSize: 0.05,
                 bevelSegments: 2
             });
-            var material = new THREE.MeshBasicMaterial( { color: 0xdddddd } );
-            this.player = new THREE.Mesh( geometry, material );
+            var material = new THREE.MeshBasicMaterial({color: 0xdddddd});
+            this.player = new THREE.Mesh(geometry, material);
             this.player.scale.y = 0.7;
             this.player.scale.x = 1.0;
             this.player.castShadow = true;
-            this.scene.add( this.player );
+            this.scene.add(this.player);
         } );
     }
 
@@ -268,47 +273,68 @@ class WorldView {
 
         // hide cells that aren't in bounds
         this.world.map.forEachCell(c => {
-            c.objectGroup.visible = c.x >= xmin && c.x <= xmax && c.y >= ymin && c.y <= ymax;
+            c.objectGroup.visible = c.x >= xmin-1 && c.x <= xmax+1 && c.y >= ymin-1 && c.y <= ymax+1;
+        });
+
+        // show room lights if the room is in bounds
+        this.world.map.rooms.forEach(room => {
+            const hidden = room.x2 < xmin || room.y2 < ymin || room.x1 > xmax || room.y1 > ymax;
+            if(room.light) {
+                room.light.setVisible(!hidden);
+            }
         });
 
         // render
         this.renderer.render(this.scene, this.camera);
     }
 
-    loadObject(name, position, rot = 0, cell = null, cellPartNames = '') {
-        var loader = new THREE.GLTFLoader();
-
-        loader.load(`objects/${name}.glb`, gltf => {
-            const object = gltf.scene;
-            object.rotateZ(rot * Math.PI/2.0);
-
-            function setShadowProps(thing) {
-                if(thing.userData.cast > 0) {
-                    thing.castShadow = true;
-                }
-                thing.receiveShadow = true;
-                thing.children.forEach(setShadowProps);
-            }
-            setShadowProps(object);
-
-            object.position.x = position.x;
-            object.position.y = position.y;
-            object.position.z = position.z;
-
-            if(cell) {
-                object.visible = false;
-                cellPartNames.split(' ').forEach(n => {
-                    cell.objects[n].push(object);
+    async loadObjectToCache(name) {
+        if(!this.objectLoadCache[name]) {
+            console.log('loading '+name+' from url');
+            // load for first time
+            const loader = new THREE.GLTFLoader();
+            await new Promise(resolve => {
+                loader.load(`objects/${name}.glb`, gltf => {
+                    this.objectLoadCache[name] = gltf.scene;
+                    resolve();
                 });
-            }else{
-                // if we're part of a cell, we'll get added to the scene through the cell's group
-                // otherwise, add manually
-                this.scene.add(object);
+            });
+        }
+    }
+
+    async loadObject(name, position, rot = 0, cell = null, cellPartNames = '') {
+        await this.loadObjectToCache(name);
+
+        const object = this.objectLoadCache[name].clone();
+
+        object.rotateZ(rot * Math.PI/2.0);
+        function setShadowProps(thing) {
+            if(thing.userData.cast > 0) {
+                thing.castShadow = true;
             }
-        });
+            thing.receiveShadow = true;
+            thing.children.forEach(setShadowProps);
+        }
+        setShadowProps(object);
+
+        object.position.x = position.x;
+        object.position.y = position.y;
+        object.position.z = position.z;
+
+        if(cell) {
+            object.visible = false;
+            cellPartNames.split(' ').forEach(n => {
+                cell.objects[n].push(object);
+            });
+        }else{
+            // if we're part of a cell, we'll get added to the scene through the cell's group
+            // otherwise, add manually
+            this.scene.add(object);
+        }
     }
 
     loadLevelObjects() {
+        // load cells
         this.world.map.forEachCell(c => {
             this.scene.add(c.objectGroup);
 
@@ -332,10 +358,14 @@ class WorldView {
                         this.loadObject('walls3', new THREE.Vector3(c.x, c.y, 0), 3, c, 'wallE wallN wallW');
                         break;
                     case 'wewe':
-                        this.loadObject('walls2a', new THREE.Vector3(c.x, c.y, 0), randInt(0, 1) * 2, c, 'wallN wallS');
+                        this.loadObject('walls1', new THREE.Vector3(c.x, c.y, 0), 1, c, 'wallN');
+                        this.loadObject('walls1', new THREE.Vector3(c.x, c.y, 0), 3, c, 'wallS');
+                        // this.loadObject('walls2a', new THREE.Vector3(c.x, c.y, 0), randInt(0, 1) * 2, c, 'wallN wallS');
                         break;
                     case 'ewew':
-                        this.loadObject('walls2a', new THREE.Vector3(c.x, c.y, 0), randInt(0, 1) * 2 + 1, c, 'wallE wallW');
+                        this.loadObject('walls1', new THREE.Vector3(c.x, c.y, 0), 0, c, 'wallE');
+                        this.loadObject('walls1', new THREE.Vector3(c.x, c.y, 0), 2, c, 'wallW');
+                        // this.loadObject('walls2a', new THREE.Vector3(c.x, c.y, 0), randInt(0, 1) * 2 + 1, c, 'wallE wallW');
                         break;
                     case 'wwee':
                         this.loadObject('walls2b', new THREE.Vector3(c.x, c.y, 0), 0, c, 'wallW wallS');
@@ -436,14 +466,41 @@ class WorldView {
                 );
             }
         });
+
+        // add room lights to scene
+        this.world.map.rooms.forEach(room => {
+            if(room.light) {
+                this.scene.add(room.light.light);
+            }
+        });
     }
 }
 
 var world = new World();
 var view = new WorldView(world);
-view.loadLevelObjects();
-view.render();
 
+async function start() {
+    await view.loadObjectToCache('belowWaterWall');
+    await view.loadObjectToCache('floor0a');
+    await view.loadObjectToCache('floor0b');
+    await view.loadObjectToCache('floor0c');
+    await view.loadObjectToCache('stairs');
+    await view.loadObjectToCache('walls0a');
+    await view.loadObjectToCache('walls0b');
+    await view.loadObjectToCache('walls0c');
+    await view.loadObjectToCache('walls1');
+    await view.loadObjectToCache('walls2a');
+    await view.loadObjectToCache('walls2b');
+    await view.loadObjectToCache('walls3');
+    await view.loadObjectToCache('walls4');
+    await view.loadObjectToCache('doorFrame');
+    await view.loadObjectToCache('door');
+    await view.loadObjectToCache('water');
+
+    view.loadLevelObjects();
+    view.render();
+}
+start();
 
 window.addEventListener('keypress', e => {
     switch(e.code) {

@@ -11,9 +11,40 @@
             width: 100%;
             height: 100%;
         }
+
+        #mapView{
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 5;
+        }
+        #mapView .row {
+            font-size: 0;
+        }
+        #mapView .cell {
+            display: inline-block;
+            width: 5px;
+            height: 5px;
+        }
+        .cell.door   { background: #d84; }
+        .cell.water  { background: #0af; }
+        .cell.blank  { background: #a33; }
+        .cell.wall   { background: #000; }
+        .cell.floor  { background: #ccc; }
+        .cell.stairs { background: #2f2; }
     </style>
 </head>
 <body>
+    <div id="mapView"></div>
+    <script>
+        document.getElementById('mapView').addEventListener('click', e => {
+            if(!e.target.classList.contains('cell')) return;
+            world.player.tryToMove(
+                e.target.dataset.x - world.player.x,
+                e.target.dataset.y - world.player.y
+            );
+        });
+    </script>
     <script src="lodash.min.js"></script>
     <script src="three.min.js"></script>
     <script src="RectAreaLightUniformsLib.js"></script>

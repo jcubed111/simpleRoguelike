@@ -177,9 +177,189 @@ class Cell{
     }
 }
 
+class RoomLight{
+    constructor(xmin, ymin, xmax, ymax) {
+        this.w = xmax - xmin;
+        this.h = ymax - ymin;
+        this.x = (xmin + xmax) / 2;
+        this.y = (ymin + ymax) / 2;
+
+        this.light = new THREE.RectAreaLight(0x00ffaa, 2.0, this.w, this.h);
+        this.light.position.set(this.x, this.y, 0.9);
+        this.light.setRotationFromAxisAngle(new Vec3(1, 0, 0), Math.PI); // point down
+        this.light.visible = false;
+    }
+
+    setVisible(visible) {
+        this.light.visible = visible;
+    }
+}
+
 class Room{
-    constructor(zoneIndex) {
+    constructor(map, x1, y1, w, h, zoneIndex) {
+        this.map = map;
+        this.x1 = this.centerX1 = x1;
+        this.y1 = this.centerY1 = y1;
+        this.w = w;
+        this.h = h;
+        this.x2 = this.centerX2 = x1+w;
+        this.y2 = this.centerY2 = y1+h;
         this.zoneIndex = zoneIndex;
+
+        this.light = null;
+    }
+
+    buildPart1() {
+        // part of room that gets built before there are doors
+        // only dig
+        const map = this.map;
+
+        for(let x = this.x1+1; x < this.x2-1; x++) {
+            for(let y = this.y1+1; y < this.y2-1; y++) {
+                const c = map.at(x, y);
+                c.type = 'floor';
+                c.zoneIndex = this.zoneIndex;
+                c.room = this;
+            }
+        }
+
+        /* room features */
+        // columns
+        if(this.w > 5 && this.h > 5 && oneIn(3)) {
+            const x = randInt(this.x1+2, this.x2-2);
+            const y = randInt(this.y1+2, this.y2-2);
+            map.at(x, y).type = 'wall';
+            map.at(x, y).zoneIndex = -1;
+            map.at(x, y).room = null;
+        }
+
+        // corner rounding
+        const xmin = this.x1+1;
+        const ymin = this.y1+1;
+        const xmax = this.x2-2;
+        const ymax = this.y2-2;
+        const cornerRoundOptions = [
+            [], [], [], [], [], [],
+            [map.at(xmin, ymin), this.w < this.h ? '+y' : '+x'],
+            [map.at(xmin, ymax), this.w < this.h ? '-y' : '+x'],
+            [map.at(xmax, ymax), this.w < this.h ? '-y' : '-x'],
+            [map.at(xmax, ymin), this.w < this.h ? '+y' : '-x'],
+            [map.at(xmin, ymin), map.at(xmin+1, ymin), '+y'],
+            [map.at(xmin, ymin), map.at(xmin, ymin+1), '+x'],
+            [map.at(xmin, ymax), map.at(xmin+1, ymax), '-y'],
+            [map.at(xmin, ymax), map.at(xmin, ymax-1), '+x'],
+            [map.at(xmax, ymax), map.at(xmax-1, ymax), '-y'],
+            [map.at(xmax, ymax), map.at(xmax, ymax-1), '-x'],
+            [map.at(xmax, ymin), map.at(xmax-1, ymin), '+y'],
+            [map.at(xmax, ymin), map.at(xmax, ymin+1), '-x'],
+        ];
+        if(this.w > 5 || this.h > 5) {
+            const wallsToAdd = randChoice(cornerRoundOptions);
+            const centerSizeToDecrease = wallsToAdd.pop();
+            wallsToAdd.forEach(c => {
+                c.type = 'wall';
+                c.zoneIndex = -1;
+                c.room = null;
+            });
+            switch(centerSizeToDecrease) {
+                case '+x': this.centerX1++; break;
+                case '-x': this.centerX2--; break;
+                case '+y': this.centerY1++; break;
+                case '-y': this.centerY2--; break;
+            }
+        }
+
+        return (this.w-2) * (this.h-2);
+    }
+
+    buildPart2() {
+        // part of room that gets built after there are doors
+        this.type = randChoice([
+            'plain', 'plain',
+            'water',
+        ]);
+        this['buildAs_'+this.type]();
+    }
+
+    buildAs_water() {
+        // choose a water generation method
+        const genType = randChoice([
+            'genWaterPool',
+            'genWaterVoronoi',
+            'genWaterRiver',
+        ]);
+        this[genType]();
+
+        this.light = new RoomLight(this.centerX1+1, this.centerY1+1, this.centerX2-2, this.centerY2-2);
+    }
+
+    genWaterPool() {
+        const map = this.map;
+
+        for(let x = this.x1+2; x < this.x2-2; x++) {
+            for(let y = this.y1+2; y < this.y2-2; y++) {
+                const c = map.at(x, y);
+                if(c.type != 'floor') continue;
+                c.type = 'water';
+            }
+        }
+    }
+
+    genWaterVoronoi() {
+        const map = this.map;
+
+        let points = [1, 1, 1, 1, 0, 0, 0, 0].map(isWater => {
+            return [rand(this.x1+1, this.x2-1), rand(this.y1+1, this.y1-1), isWater];
+        });
+
+        for(let x = this.x1+1; x < this.x2-1; x++) {
+            for(let y = this.y1+1; y < this.y2-1; y++) {
+                const c = map.at(x, y);
+                if(c.type != 'floor') continue;
+
+                const closestPoint = _.minBy(points, ([px, py, isWater]) => Math.pow(x-px, 2) + Math.pow(y-py, 2));
+                if(closestPoint[2]) {
+                    c.type = 'water';
+                }
+            }
+        }
+    }
+
+    genWaterRiver() {
+        const map = this.map;
+
+        // choose river direction
+        const direction = randChoice(['N', 'S', 'E', 'W']);
+        const nextCellChoices = ({
+            N: ['N', 'E', 'W'],
+            S: ['S', 'E', 'W'],
+            E: ['E', 'N', 'S'],
+            W: ['W', 'N', 'S'],
+        })[direction];
+
+        // get a cell along one wall
+        let startCell = ({
+            N: map.at(Math.floor(this.x1 + this.w/2), this.y1+1),
+            S: map.at(Math.floor(this.x1 + this.w/2), this.y2-2),
+            E: map.at(this.x1+1, Math.floor(this.y1 + this.h/2)),
+            W: map.at(this.x2-2, Math.floor(this.y1 + this.h/2)),
+        })[direction];
+
+        // build the river
+        while(startCell.room == this) {
+            startCell.type = 'water';
+            startCell = startCell[randChoice([
+                'cell' + nextCellChoices[0],
+                'cell' + nextCellChoices[0],
+                'cell' + nextCellChoices[0],
+                'cell' + nextCellChoices[1],
+                'cell' + nextCellChoices[2],
+            ])]();
+        }
+    }
+
+    buildAs_plain() {
+
     }
 }
 
@@ -280,11 +460,11 @@ class Map{
         // add random rooms
         let failures = 0;
         let zoneIndex = 0;
-        while(failures < 75) {
+        while(failures < w*h*0.1) {
             let roomX = randInt(0, w);
             let roomY = randInt(0, h);
-            let roomW = randInt(5, 10); // includes walls
-            let roomH = randInt(5, 10); // includes walls
+            let roomW = randInt(5, 12); // includes walls
+            let roomH = randInt(5, 12); // includes walls
             const clear = this.checkClear(roomX, roomY, roomW, roomH);
             if(clear) {
                 if(rand(0, 1) < 0.2) {
@@ -408,14 +588,18 @@ class Map{
         this.filterCells(c => c.type == 'door').filter(c => {
             const p = c.getWallProfile();
             return p != 'wewe' && p != 'ewew';
-        }).forEach(c => c.type == 'floor');
+        }).forEach(c => c.type = 'floor');
 
         // convert blank spots to wall
         this.forEachCell(c => {
             if(c.type == 'blank') c.type = 'wall';
         });
 
-        this.consoleDump();
+        // finish building rooms
+        this.rooms.forEach(r => r.buildPart2());
+
+        // this.consoleDump();
+        this.htmlDump();
     }
 
     findEmptyArea() {
@@ -440,20 +624,10 @@ class Map{
     }
 
     addRoom(x1, y1, w, h, zoneIndex) {
-        let room = new Room(zoneIndex);
+        let room = new Room(this, x1, y1, w, h, zoneIndex);
         this.rooms.push(room);
 
-        for(let x = x1+1; x < x1+w-1; x++) {
-            for(let y = y1+1; y < y1+h-1; y++) {
-                const c = this.at(x, y);
-                c.type = 'floor';
-                c.zoneIndex = zoneIndex;
-                c.room = room;
-            }
-        }
-        // TODO: add irregular shape possibility
-
-        return (w-2) * (h-2);
+        return room.buildPart1();
     }
 
     addDeadZone(x1, y1, w, h) {
@@ -521,6 +695,15 @@ class Map{
             }).join(' ');
         }).reverse().join('\n');
         console.log(s);
+    }
+
+    htmlDump() {
+        let s = this.cells.map((row, y) => {
+            return row.map((c, x) => {
+                return `<span class="cell ${c.type}" data-x="${x}" data-y="${y}"></span>`;
+            }).join('');
+        }).reverse().join('</div><div class="row">');
+        document.getElementById('mapView').innerHTML = '<div class="row">' + s + '</div>';
     }
 
     contains(x, y) {
