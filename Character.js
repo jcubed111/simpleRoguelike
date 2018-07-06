@@ -85,6 +85,7 @@ class Character{
     }
 
     die() {
+        this.world.log(`${this.getLogName()} dies!`);
         this.dropLoot();
         this.x = -1;
         this.y = -1;
@@ -99,7 +100,6 @@ class Character{
         this.currentHp -= amount;
         if(this.currentHp <= 0) {
             this.die();
-            this.world.log(`${this.getLogName()} dies!`);
         }
     }
 

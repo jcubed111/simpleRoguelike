@@ -32,6 +32,8 @@ async function delay(ms) {
 
 class World{
     constructor() {
+        this.eventLog = [];
+
         // this.map = new Map(15, 15, `
         //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         //     1 0 0 0 1 1 1 s 1 1 0 0 0 1 1
@@ -74,6 +76,7 @@ class World{
 
         this.map.characters.push(this.player);
         this.map.characters.push(new enemyTypes.Kobold(this, 1));
+        this.map.characters.push(new enemyTypes.Kobold(this, 1));
 
         // const startingCell = randChoice(this.map.filterCells(c => c.type == 'floor'));
         // this.player.x = startingCell.x;
@@ -83,6 +86,8 @@ class World{
         this.player.y = 12;
         this.map.characters[1].x = 11;
         this.map.characters[1].y = 12;
+        this.map.characters[2].x = 12;
+        this.map.characters[2].y = 5;
 
         this.updateCellVisibility();
     }
@@ -168,7 +173,7 @@ class World{
     }
 
     log(text) {
-        console.info("%c " + text, 'background: #eee; color: #1155ff');
+        this.eventLog.push(text);
     }
 }
 
@@ -324,6 +329,34 @@ class WorldView {
 
         // render
         this.renderer.render(this.scene, this.camera);
+        this.renderHud();
+    }
+
+    renderHud() {
+        const world = this.world;
+        const player = world.player;
+
+        /* hp bar */
+        const filled = '%'.repeat(Math.max(0, player.currentHp));
+        const empty = '.'.repeat(Math.max(0, player.maxHp - player.currentHp));
+
+        const max = player.maxHp.toString();
+        let current = player.currentHp.toString();
+        while(current.length < max.length) current = " "+current;
+
+        let t = `HP: (${current}/${max}) [${filled}${empty}]`;
+        document.getElementById('hpView').innerText = t;
+
+        /* log */
+        t = '';
+        const linesToDisplay = Math.min(5, world.eventLog.length);
+        for(let i = 0; i < linesToDisplay; i++) {
+            t += '<div class="row">';
+            t += world.eventLog[world.eventLog.length - linesToDisplay + i];
+            t += '</div>';
+        }
+        document.getElementById('logView').innerHTML = t;
+
     }
 
     async loadObjectToCache(name) {

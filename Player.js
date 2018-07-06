@@ -1,21 +1,21 @@
 const raceBases = {
     orc: {
-        maxHp: 7,
+        maxHp: 15,
         strength: 1,
         unarmedAttack: '1d3',
     },
     elf: {
-        maxHp: 5,
+        maxHp: 10,
         soul: 1,
         unarmedAttack: '1',
     },
     tiefling: {
-        maxHp: 7,
+        maxHp: 15,
         precision: 1,
         unarmedAttack: '1d2',
     },
     human: {
-        maxHp: 5,
+        maxHp: 10,
         voice: 1,
         unarmedAttack: '1',
     },
@@ -77,6 +77,12 @@ class Player extends Character {
 
     getLogName() {
         return "you";
+    }
+
+    die() {
+        // TODO
+        this.world.log(`You die! :'(`);
+        this.dead = true;
     }
 
     tryToMove(dx, dy) {

@@ -6,7 +6,10 @@
 </head>
 <body>
     <div id="mapView"></div>
-    <div id="logView"></div>
+    <div id="hud">
+        <div id="logView"></div>
+        <div id="hpView">HP: (10/15) [##########_____]</div>
+    </div>
     <script>
         document.getElementById('mapView').addEventListener('click', e => {
             if(!e.target.classList.contains('cell')) return;

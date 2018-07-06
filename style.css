@@ -1,6 +1,9 @@
+@import url('https://fonts.googleapis.com/css?family=Inconsolata:400,700');
+
 body {
     margin: 0;
     overflow: hidden;
+    font-family: 'Inconsolata', monospace;
 }
 canvas {
     width: 100%;
@@ -35,3 +38,41 @@ canvas {
 .cell.floor  { background: #ccc; }
 .cell.stairs { background: #2f2; }
 .cell.pit    { background: #833; }
+
+
+#hud{
+    font-size: 20px;
+    text-shadow:
+        1px 1px 0px #000,
+        1px -1px 0px #000,
+        -1px 1px 0px #000,
+        -1px -1px 0px #000;
+}
+
+#hpView{
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: #f0a;
+    z-index: 5;
+    pointer-events: none;
+    white-space: pre;
+}
+
+#logView{
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    color: #aaa;
+    z-index: 5;
+    pointer-events: none;
+    white-space: pre;
+}
+
+#logView .row{
+    padding-top: 4px;
+}
+
+#logView .row::first-letter{
+    text-transform: uppercase;
+}

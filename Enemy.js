@@ -82,7 +82,7 @@ enemyTypes.Kobold = class Kobold extends BasicMeleeEnemy{
         this.color = 0x11aa33;
 
         this.strength = Math.ceil(this.level / 2) + 1;
-        this.precision = Math.floor(this.level / 2);
+        this.precision = Math.floor(this.level / 2) + 1;
         this.weapon = weapons.dagger();
     }
 }
