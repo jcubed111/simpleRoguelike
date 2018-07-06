@@ -347,7 +347,9 @@ class Room{
 
         // build the river
         while(startCell.room == this) {
-            startCell.type = 'water';
+            if(startCell.type == 'floor') {
+                startCell.type = 'water';
+            }
             startCell = startCell[randChoice([
                 'cell' + nextCellChoices[0],
                 'cell' + nextCellChoices[0],

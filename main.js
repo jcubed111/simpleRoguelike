@@ -1,3 +1,9 @@
+let before = THREE.Object3D.prototype.updateMatrixWorld;
+THREE.Object3D.prototype.updateMatrixWorld = function(force) {
+    if(!this.visible) return;
+    before.call(this, force);
+};
+
 const Vec3 = THREE.Vector3;
 
 function rand(min, max) {
@@ -95,7 +101,10 @@ class World{
             const edge = visibilityEdgeList[i];
             if(!this.map.contains(px + edge.dx, py + edge.dy)) continue;
             const cell = this.map.at(px + edge.dx, py + edge.dy);
-            if(!searchedInterval.contains(edge.minAngle-tolerance, edge.maxAngle+tolerance)) {
+            const minAngle = Math.max(-Math.PI, edge.minAngle-tolerance);
+            const maxAngle = Math.min(Math.PI, edge.maxAngle+tolerance);
+            if(!searchedInterval.contains(minAngle, maxAngle)) {
+                // this edge isn't being blocked right now
                 cell.setWallVisible(edge.side);
 
                 if(cell.blocksLOS()) {
