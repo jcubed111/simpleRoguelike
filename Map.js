@@ -38,6 +38,12 @@ class Cell{
         this.currentDoorRotation = 0;
         this.zoneIndex = -1;
         this.room = null;
+        this.lightSpec = null;
+
+        this.torchN = false;
+        this.torchS = false;
+        this.torchE = false;
+        this.torchW = false;
 
         this.wallWVisibleToPlayer = false;
         this.wallSVisibleToPlayer = false;
@@ -192,6 +198,35 @@ class RoomLight{
 
     setVisible(visible) {
         this.light.visible = visible;
+    }
+}
+
+class CellLightSpec{
+    constructor(pos, color, intensity) {
+        this.pos = pos;
+        this.type = 'unknown';
+        this.lightProps = {};
+        this.lightProps.color = new THREE.Color(color);
+        this.lightProps.intensity = intensity;
+    }
+
+    setLightProps(light) {
+        // set the necessary props on light to make it match with this spec
+        light.position.set(this.pos.x, this.pos.y, this.pos.z);
+        _.extend(light, this.lightProps);
+    }
+
+    dist2(player) {
+        return Math.pow(this.pos.x - player.x, 2) + Math.pow(this.pos.y - player.y, 2);
+    }
+}
+
+class CellPointLightSpec extends CellLightSpec{
+    constructor(pos, color, intensity, distance, decay) {
+        super(pos, color, intensity);
+        this.type = 'PointLight';
+        this.lightProps.distance = distance;
+        this.lightProps.decay = decay;
     }
 }
 
@@ -361,7 +396,7 @@ class Room{
     }
 
     buildAs_plain() {
-
+        // pass, just a plain room
     }
 }
 
@@ -431,11 +466,14 @@ class Map{
             this.generate();
         }
 
-        // remember door cells so we can update door angles without having to search through all cells
-        this.movingCells = [];
+        // remember certain cells so we can update them without having to search through all cells
+        this.dynamicCells = [];
         this.forEachCell(c => {
-            if(c.type == 'door') {
-                this.movingCells.push(c);
+            if(
+                c.type == 'door' ||
+                c.lightSpec
+            ) {
+                this.dynamicCells.push(c);
             }
         });
     }
@@ -557,9 +595,6 @@ class Map{
             currentDoorCount++;
         }
 
-        // done adding doors
-        console.log('Door success: ', currentDoorCount / desiredDoorCount);
-
         // remove some of the dead ends
         function isDeadEnd(c) {
             if(c.room != null || c.isWall()) return false;
@@ -599,6 +634,39 @@ class Map{
 
         // finish building rooms
         this.rooms.forEach(r => r.buildPart2());
+
+        // lighting zone map
+        const lightInZone = {};
+
+        // add hallway torches
+        this.forEachCell(c => {
+            if(c.room == null && c.type == 'floor') {
+                const zone = Math.floor(c.x/5) + ' ' + Math.floor(c.y/5);
+                if(lightInZone[zone]) return;
+
+                const adjacentWalls = [
+                    [c.cellE(), 'W', 0.3, 0],
+                    [c.cellN(), 'S', 0, 0.3],
+                    [c.cellW(), 'E', -0.3, 0],
+                    [c.cellS(), 'N', 0, -0.3],
+                ].filter(([cell, side]) => cell.isWall());
+                if(adjacentWalls.length == 0) return;
+
+                if(!oneIn(5)) return;
+                const [wallCell, side, lx, ly] = randChoice(adjacentWalls);
+
+                // add a torch to the wall
+                wallCell['torch' + side] = true;
+                c.lightSpec = new CellPointLightSpec(
+                    new Vec3(c.x+lx, c.y+ly, 0.8),
+                    0xff7700,
+                    3.0,
+                    1.5,
+                    1.4
+                );
+                lightInZone[zone] = true;
+            }
+        });
 
         // this.consoleDump();
         this.htmlDump();

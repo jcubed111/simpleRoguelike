@@ -1,9 +1,11 @@
+/* THREE js hack to improve performance */
 let before = THREE.Object3D.prototype.updateMatrixWorld;
 THREE.Object3D.prototype.updateMatrixWorld = function(force) {
     if(!this.visible) return;
     before.call(this, force);
 };
 
+/*****/
 const Vec3 = THREE.Vector3;
 
 function rand(min, max) {
@@ -73,7 +75,7 @@ class World{
         //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         // `);
 
-        this.map = new Map(150, 150);
+        this.map = new Map(75, 75);
 
         this.player = new Player(this, 1, 7);
 
@@ -172,7 +174,7 @@ class WorldView {
         document.body.appendChild(this.renderer.domElement);
 
         /* player light */
-        this.playerLight = new THREE.PointLight(0xff8811, this.hardcoreMode ? 3.0 : 2.5, 7, 0.8);
+        this.playerLight = new THREE.PointLight(0xff9933, this.hardcoreMode ? 3.0 : 2.5, 7, 0.8);
         this.playerLight.position.set(0, 0, 0.8);
         this.playerLight.castShadow = true;
         this.playerLight.shadow.camera.far = this.playerLight.distance;
@@ -188,6 +190,19 @@ class WorldView {
         if(!this.hardcoreMode) this.scene.add(this.fillLight);
 
         /* environment lighting */
+        this.dynamicLights = [
+            new THREE.PointLight(0x000000, 0.0),
+            new THREE.PointLight(0x000000, 0.0),
+            new THREE.PointLight(0x000000, 0.0),
+            new THREE.PointLight(0x000000, 0.0),
+            new THREE.PointLight(0x000000, 0.0),
+        ];
+        this.dynamicLights.forEach(l => {
+            this.scene.add(l);
+            // l.castShadow = true;
+            // l.shadow.camera.near = 0.01;
+            // l.shadow.camera.far = 5.0;
+        });
         // let waterLight = this.waterLight = new THREE.RectAreaLight(0x00ffaa, 1.5, 2, 3);
         // waterLight.position.set(6, 8.5, 0.9);
         // waterLight.setRotationFromAxisAngle(new Vec3(1, 0, 0), Math.PI); // point down
@@ -247,22 +262,37 @@ class WorldView {
         if(this.player) this.player.position.set(this.camPos.x-0.3, this.camPos.y-0.35, 0.2);
         if(this.player) this.player.position.set(this.world.player.x-0.3, this.world.player.y-0.35, 0.2);
 
-        // move environment pieces
-        this.world.map.movingCells.forEach(c => {
-            switch(c.type) {
-                case 'door':
-                    if(c.currentDoorRotation < c.desiredDoorRotation) {
-                        c.currentDoorRotation = Math.min(c.currentDoorRotation + this.doorOpenSpeed * df, c.desiredDoorRotation);
-                    } else if(c.currentDoorRotation > c.desiredDoorRotation) {
-                        c.currentDoorRotation = Math.max(c.currentDoorRotation - this.doorOpenSpeed * df, c.desiredDoorRotation);
-                    } else {
-                        break;
-                    }
-                    // move the door meshes
+        // update dynamic cells
+        let lightSpecs = [];
+        this.world.map.dynamicCells.forEach(c => {
+            if(c.type == 'door') {
+                let needToMoveDoor = false;
+                if(c.currentDoorRotation < c.desiredDoorRotation) {
+                    c.currentDoorRotation = Math.min(c.currentDoorRotation + this.doorOpenSpeed * df, c.desiredDoorRotation);
+                    needToMoveDoor = true;
+                } else if(c.currentDoorRotation > c.desiredDoorRotation) {
+                    c.currentDoorRotation = Math.max(c.currentDoorRotation - this.doorOpenSpeed * df, c.desiredDoorRotation);
+                    needToMoveDoor = true;
+                }
+
+                // move the door meshes
+                if(needToMoveDoor) {
                     c.objects.door.forEach(o => o.setRotationFromAxisAngle(new Vec3(0, 0, 1), Math.PI*0.5*c.currentDoorRotation));
-                    break;
+                }
+            }
+
+            if(c.lightSpec) {
+                lightSpecs.push(c.lightSpec);
             }
         });
+
+        // move our dynamic lights around to match the closest light specs
+        lightSpecs.sort((a, b) => a.dist2(this.world.player) - b.dist2(this.world.player));
+        this.dynamicLights.forEach(l => l.visible = false);
+        for(let i=0; i<lightSpecs.length && i<this.dynamicLights.length; i++) {
+            lightSpecs[i].setLightProps(this.dynamicLights[i]);
+            this.dynamicLights[i].visible = true;
+        }
 
         // update the camera matrices or screenCoordToWorldCoord flips out
         this.camera.updateMatrix();
@@ -299,7 +329,6 @@ class WorldView {
 
     async loadObjectToCache(name) {
         if(!this.objectLoadCache[name]) {
-            console.log('loading '+name+' from url');
             // load for first time
             const loader = new THREE.GLTFLoader();
             await new Promise(resolve => {
@@ -312,7 +341,10 @@ class WorldView {
     }
 
     async loadObject(name, position, rot = 0, cell = null, cellPartNames = '') {
-        await this.loadObjectToCache(name);
+        if(!this.objectLoadCache[name]) {
+            console.warn('Object loading cache miss on ' + name);
+            await this.loadObjectToCache(name);
+        }
 
         const object = this.objectLoadCache[name].clone();
 
@@ -474,6 +506,20 @@ class WorldView {
                     'door',
                 );
             }
+
+            // decoration
+            if(c.torchE) {
+                this.loadObject('torch', new THREE.Vector3(c.x, c.y, 0), 0, c, 'wallE');
+            }
+            if(c.torchN) {
+                this.loadObject('torch', new THREE.Vector3(c.x, c.y, 0), 1, c, 'wallN');
+            }
+            if(c.torchW) {
+                this.loadObject('torch', new THREE.Vector3(c.x, c.y, 0), 2, c, 'wallW');
+            }
+            if(c.torchS) {
+                this.loadObject('torch', new THREE.Vector3(c.x, c.y, 0), 3, c, 'wallS');
+            }
         });
 
         // add room lights to scene
@@ -505,13 +551,14 @@ async function start() {
     await view.loadObjectToCache('doorFrame');
     await view.loadObjectToCache('door');
     await view.loadObjectToCache('water');
+    await view.loadObjectToCache('torch');
 
     view.loadLevelObjects();
     view.render();
 }
 start();
 
-window.addEventListener('keypress', e => {
+window.addEventListener('keydown', e => {
     switch(e.code) {
         case 'KeyW':
         case 'ArrowUp':
