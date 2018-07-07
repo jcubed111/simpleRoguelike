@@ -33,6 +33,11 @@ class MinHeap{
     pop() {
         if(this.length == 0) return undefined;
 
+        if(this.length == 1) {
+            this.length--;
+            return this.elements.pop().value;
+        }
+
         const result = this.elements[0];
         this.elements[0] = this.elements.pop();
         this.length--;
