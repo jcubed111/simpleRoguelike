@@ -102,6 +102,10 @@ class Player extends Character {
         this.endTurn();
     }
 
+    pass() {
+        this.endTurn();
+    }
+
     async endTurn() {
         const turnTime = 100; // ms
 

@@ -61,7 +61,7 @@ class BasicMeleeEnemy extends Enemy{
             }else{
                 // move towards last known player location
                 this.aiMoveToward(this.aiData.lastPlayerCell);
-                if(this.getCell == this.aiData.lastPlayerCell) {
+                if(this.getCell() == this.aiData.lastPlayerCell && !this.canSeePlayer()) {
                     this.aiData.huntingPlayer = false;
                 }
                 return;

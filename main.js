@@ -620,5 +620,8 @@ window.addEventListener('keydown', e => {
         case 'ArrowLeft':
             world.player.tryToMove(-1, 0);
             break;
+        case 'Space':
+            world.player.pass();
+            break;
     }
 });
