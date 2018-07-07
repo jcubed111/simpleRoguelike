@@ -323,6 +323,7 @@ class Room{
             // 'pit',
         ]);
         this['buildAs_'+this.type]();
+        this.populate(randInt(0, 4));
     }
 
     buildAs_water() {
@@ -427,6 +428,35 @@ class Room{
             }
         }
     }
+
+    getCells() {
+        const result = [];
+        for(let x = this.x1+1; x < this.x2-1; x++) {
+            for(let y = this.y1+1; y < this.y2-1; y++) {
+                const c = this.map.at(x, y);
+                if(c.room == this) {
+                    result.push(c);
+                }
+            }
+        }
+        return result;
+    }
+
+    populate(numEnemies) {
+        const map = this.map;
+
+        let floorCells = this.getCells().filter(c => c.type == 'floor');
+        floorCells = _.shuffle(floorCells);
+
+        while(floorCells.length && numEnemies > 0) {
+            const cell = floorCells.pop();
+            const enemy = new enemyTypes.Kobold(this.map.world, 1);
+            enemy.x = cell.x;
+            enemy.y = cell.y;
+            this.map.characters.push(enemy);
+            numEnemies--;
+        }
+    }
 }
 
 class ZoneTree{
@@ -466,7 +496,8 @@ class ZoneTree{
 }
 
 class Map{
-    constructor(width, height, layout = '') {
+    constructor(world, width, height, layout = '') {
+        this.world = world;
         this.rooms = [];
         this.width = width;
         this.height = height;

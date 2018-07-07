@@ -5,8 +5,10 @@ class Enemy extends Character{
         this.level = level;
 
         this.aiData = {
+            _sawPlayerLastTurn: false,
             lastPlayerCell: null,
             huntingPlayer: false,
+            suprised: false,
         };
     }
 
@@ -20,7 +22,12 @@ class Enemy extends Character{
 
     updatePlayerLocationKnowledge() {
         if(this.canSeePlayer()) {
+            this.aiData.suprised = !this.aiData._sawPlayerLastTurn;
+            this.aiData._sawPlayerLastTurn = true;
             this.aiData.lastPlayerCell = this.world.player.getCell();
+        }else{
+            this.aiData.suprised = false;
+            this.aiData._sawPlayerLastTurn = false;
         }
     }
 
@@ -37,18 +44,29 @@ class BasicMeleeEnemy extends Enemy{
     takeAiTurn() {
         this.updatePlayerLocationKnowledge();
 
+        const stopForSuprise = !this.aiData.huntingPlayer;
+
         if(this.canSeePlayer()) {
             this.aiData.huntingPlayer = true;
         }
 
-        if(this.aiData.huntingPlayer) {
+        if(this.aiData.suprised && stopForSuprise) {
+            // we're suprised, stand still
+            return this.move(0, 0);
+
+        }else if(this.aiData.huntingPlayer) {
             if(this.inMeleeRange(this.world.player)) {
                 // attack!
                 this.meleeAttack(this.world.player);
             }else{
                 // move towards last known player location
-                return this.aiMoveToward(this.aiData.lastPlayerCell);
+                this.aiMoveToward(this.aiData.lastPlayerCell);
+                if(this.getCell == this.aiData.lastPlayerCell) {
+                    this.aiData.huntingPlayer = false;
+                }
+                return;
             }
+
         }else{
             return this.aiMoveWander();
         }

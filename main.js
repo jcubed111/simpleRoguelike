@@ -34,7 +34,7 @@ class World{
     constructor() {
         this.eventLog = [];
 
-        // this.map = new Map(15, 15, `
+        // this.map = new Map(this, 15, 15, `
         //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         //     1 0 0 0 1 1 1 s 1 1 0 0 0 1 1
         //     1 0 1 0 0 0 0 0 0 0 0 1 1 1 1
@@ -52,42 +52,15 @@ class World{
         //     1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
         // `);
 
-        this.map = new Map(15, 15, `
-            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-            1 1 1 1 1 1 1 1 0 0 0 0 1 1 1
-            1 1 1 1 1 1 1 1 0 0 0 0 1 1 1
-            1 1 1 1 1 1 1 1 0 0 0 0 1 1 1
-            1 1 1 1 1 1 1 1 0 0 0 0 1 1 1
-            1 1 1 1 1 1 1 1 1 d 1 1 1 1 1
-            1 1 1 1 1 1 1 1 1 0 1 1 1 1 1
-            1 1 1 1 1 1 1 1 1 0 1 0 0 0 1
-            1 1 1 1 1 1 1 1 1 0 d 0 0 0 1
-            1 1 1 1 1 1 1 1 1 1 1 0 0 0 1
-            1 1 1 1 1 1 1 1 1 1 1 0 0 0 1
-            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-            1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-        `);
-
-        // this.map = new Map(75, 75);
+        this.map = new Map(this, 75, 75);
 
         this.player = new Player(this, 'orc', 'fighter');
 
         this.map.characters.push(this.player);
-        this.map.characters.push(new enemyTypes.Kobold(this, 1));
-        this.map.characters.push(new enemyTypes.Kobold(this, 1));
 
-        // const startingCell = randChoice(this.map.filterCells(c => c.type == 'floor'));
-        // this.player.x = startingCell.x;
-        // this.player.y = startingCell.y;
-
-        this.player.x = 8;
-        this.player.y = 12;
-        this.map.characters[1].x = 11;
-        this.map.characters[1].y = 12;
-        this.map.characters[2].x = 12;
-        this.map.characters[2].y = 5;
+        const startingCell = randChoice(this.map.filterCells(c => c.type == 'floor'));
+        this.player.x = startingCell.x;
+        this.player.y = startingCell.y;
 
         this.updateCellVisibility();
     }
