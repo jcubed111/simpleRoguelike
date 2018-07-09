@@ -96,11 +96,33 @@ enemyTypes.Kobold = class Kobold extends BasicMeleeEnemy{
     constructor(...args) {
         super(...args);
         this.type = 'Kobold';
+        this.humanoid = true;
         this.icon = 'K';
         this.color = 0x11aa33;
+        this.description = 'Kobolds are small humanoid creatures who are hostile to outsiders';
 
         this.strength = Math.ceil(this.level / 2) + 1;
         this.precision = Math.floor(this.level / 2) + 1;
         this.weapon = weapons.dagger();
+        this.unarmedAttack = '1d2';
+        this.unarmedVerb = 'claws';
+    }
+}
+
+enemyTypes.Piranha = class Piranha extends BasicMeleeEnemy{
+    constructor(...args) {
+        super(...args);
+        this.type = 'Piranha';
+        this.humanoid = false;
+        this.icon = 'P';
+        this.color = 0x6622aa;
+        this.description = 'Piranhas will bite people who get too close to the water';
+
+        this.aquaticOnly = true;
+        this.acBase = 10;
+        this.strength = Math.ceil(this.level / 2);
+        this.precision = Math.floor(this.level / 2) + 3;
+        this.unarmedAttack = '1d6 + str';
+        this.unarmedVerb = 'bites';
     }
 }

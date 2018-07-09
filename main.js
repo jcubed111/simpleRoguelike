@@ -24,6 +24,15 @@ function oneIn(n) {
     return Math.random()*n < 1;
 }
 
+function padded(t, minLength, padding = " ") {
+    const toAdd = Math.max(0, minLength - t.length);
+    return t + padding.repeat(toAdd);
+}
+
+function titleCase(s) {
+    return s.replace(/( |^|\n|\t)[a-z]/g, m => m.toUpperCase());
+}
+
 async function delay(ms) {
     await new Promise(resolve => {
         setTimeout(resolve, ms);
@@ -150,6 +159,63 @@ class World{
     }
 }
 
+class GameController{
+    constructor(view) {
+        this.view = view;
+        const world = this.world = view.world;
+        const el = this.el = this.view.renderer.domElement;
+
+        /* listen for user input */
+        window.addEventListener('keydown', e => this.keydown(e));
+        el.addEventListener('contextmenu', e => this.click(e));
+        el.addEventListener('click', e => this.click(e));
+        document.getElementById('cellInfo').addEventListener('click', e => {
+            this.view.hideCellInfo();
+        });
+    }
+
+    keydown(e) {
+        if(!world.player.myTurn) return;
+
+        switch(e.code) {
+            case 'KeyW':
+            case 'ArrowUp':
+                world.player.tryToMove(0, 1);
+                break;
+            case 'KeyS':
+            case 'ArrowDown':
+                world.player.tryToMove(0, -1);
+                break;
+            case 'KeyD':
+            case 'ArrowRight':
+                world.player.tryToMove(1, 0);
+                break;
+            case 'KeyA':
+            case 'ArrowLeft':
+                world.player.tryToMove(-1, 0);
+                break;
+            case 'Space':
+                world.player.pass();
+                break;
+        }
+    }
+
+    click(e) {
+        e.preventDefault();
+        if(e.button == 2 || (e.button == 0 && e.shiftKey)) {
+            const pos = this.view.mousePosToWorldCoord(e.clientX, e.clientY);
+            this.view.showCellInfo(world.map.at(
+                Math.round(pos.x),
+                Math.round(pos.y)
+            ));
+        }else if(e.button == 0) {
+            if(!world.player.myTurn) return;
+            // TODO: take action base don click
+        }
+        return false;
+    }
+}
+
 class WorldView {
     constructor(world) {
         this.panSpeed = 0.09; // how fast the camera moves, (0, 1]. 1 = instant
@@ -172,7 +238,7 @@ class WorldView {
         document.body.appendChild(this.renderer.domElement);
 
         /* player light */
-        this.playerLight = new THREE.PointLight(0xff9933, this.hardcoreMode ? 3.0 : 1.0, 7, 0.8);
+        this.playerLight = new THREE.PointLight(0xff9933, this.hardcoreMode ? 4.0 : 2.0, 7, 0.8);
         this.playerLight.position.set(0, 0, 0.8);
         this.playerLight.castShadow = true;
         this.playerLight.shadow.camera.far = this.playerLight.distance;
@@ -180,11 +246,11 @@ class WorldView {
         this.scene.add(this.playerLight);
 
         /* background lighting */
-        this.keyLight = new THREE.DirectionalLight(0xffffcc, 0.35);
+        this.keyLight = new THREE.DirectionalLight(0xffffcc, 0.5);
         this.keyLight.position.set(-7, -10, 10);
         if(!this.hardcoreMode) this.scene.add(this.keyLight);
 
-        this.fillLight = new THREE.AmbientLight(0x777777ff, 0.25);
+        this.fillLight = new THREE.AmbientLight(0x777777ff, 0.3);
         if(!this.hardcoreMode) this.scene.add(this.fillLight);
 
         /* environment lighting */
@@ -201,6 +267,18 @@ class WorldView {
             // l.shadow.camera.near = 0.01;
             // l.shadow.camera.far = 5.0;
         });
+
+        /* get user input */
+        this.controller = new GameController(this);
+    }
+
+    mousePosToWorldCoord(mx, my) {
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        return this.screenCoordToWorldCoord(
+            mx / width * 2 - 1,
+            my / height * -2 + 1
+        );
     }
 
     screenCoordToWorldCoord(x, y) {
@@ -329,7 +407,133 @@ class WorldView {
             t += '</div>';
         }
         document.getElementById('logView').innerHTML = t;
+    }
 
+    showCellInfo(cell) {
+        // open the cellInfo pane for cell
+        const el = document.getElementById('cellInfo');
+        el.classList.remove('hidden');
+
+        let contents = [
+            this.classify(cell.generateCharacterInfo()),
+            this.classify(cell.generateItemInfo()),
+            this.classify(cell.generateBaseInfo()),
+        ].filter(c => c.length);
+
+        function numLines(text) {
+            const matches = text.match(/\n/g);
+            if(matches) return matches.length+1;
+            if(text.length) return 1;
+            return 0;
+        }
+
+        function makeVertDecor(lLines, rLines=0) {
+            const breaks = [];
+            if(lLines) breaks.push(lLines + 1);
+            if(rLines) breaks.push(rLines + 1);
+            const len = Math.max(lLines, rLines) + 2;
+            let result = (lLines ? '-+' : ' +') + (rLines ? '-' : ' ');
+            for(let i=1; i<len; i++) {
+                result += '\n';
+                result += (lLines && lLines + 1 == i) ? '-' : ' ';
+                result += (breaks.indexOf(i) != -1) ? '+' : '|';
+                result += (rLines && rLines + 1 == i) ? '-' : ' ';
+            }
+            return result;
+        }
+
+        let sectionLengths = contents.map(numLines)
+            .filter(l => l > 0)
+            .map(l => Math.min(l, 35));
+        sectionLengths.push(0, 0, 0, 0);
+        sectionLengths.unshift(0);
+
+        el.querySelectorAll(".vertDecor").forEach((el, i) => {
+            const lLength = sectionLengths[i];
+            const rLength = sectionLengths[i+1];
+            el.innerHTML = makeVertDecor(lLength, rLength);
+            el.classList.toggle('hidden', lLength + rLength == 0);
+        });
+
+        el.querySelectorAll('.contentArea').forEach((el, i) => {
+            const c = contents[i];
+            if(c) {
+                el.innerHTML = contents[i];
+            }
+            el.parentElement.classList.toggle('hidden', !c);
+        });
+    }
+
+    hideCellInfo() {
+        document.getElementById('cellInfo').classList.add('hidden');
+    }
+
+    classify(text, wrapMark = 40, blockIndent = 0) {
+        wrapMark -= blockIndent;
+        const blockIndentPadding = " ".repeat(blockIndent);
+        if(text == '') return blockIndentPadding;
+        const classNames = {
+            d: 'decoration',
+            b: 'bold',
+            t: 'title',
+            n: 'number',
+            r: 'regular',
+            c: 'color', // format: %c{#123456}
+        };
+        return text.trim().split('\n').map(line => {
+            let resultLength = 0;
+            let result = blockIndentPadding + "<span class='regular'>";
+            let indent = line.search(/[^ \-]/);
+            for(let i=0; i < line.length; i++) {
+                let l = line[i];
+                switch(l) {
+                    case '%':
+                        const next = line[++i];
+                        if(next == 'c') {
+                            const color = line.substr(i).match(/\{(#[0-9a-fA-F]+)\}/)[1];
+                            result += "</span><span class='"+classNames.c+"' style='color: "+color+";'>";
+                            i += color.length + 2;
+                        }else{
+                            let className = classNames[next] || 'error';
+                            result += "</span><span class='"+className+"'>";
+                        }
+                        break;
+                    case ' ':
+                        if(resultLength < wrapMark) result += l;
+                        resultLength++;
+                        break;
+                    default:
+                        let part = '';
+                        let j;
+                        for(j=i; j < line.length; j++) {
+                            if(line[j] == ' ' || line[j] == '%') break;
+                            if(line[j] == '\\') j++;
+                            part += line[j];
+                        }
+                        i = j - 1;
+
+                        while(resultLength + part.length > wrapMark) {
+                            // wrap
+                            while(part.length > wrapMark - indent) {
+                                if(resultLength > indent) {
+                                    result += '\n' + blockIndentPadding;
+                                    result += " ".repeat(indent);
+                                }
+                                result += part.substr(0, wrapMark - indent);
+                                resultLength = wrapMark;
+                                part = part.substr(wrapMark - indent);
+                            }
+                            resultLength = indent;
+                            result += '\n' + blockIndentPadding;
+                            result += " ".repeat(indent);
+                        }
+                        result += part;
+                        resultLength += part.length;
+                        break;
+                }
+            }
+            return result + "</span>";
+        }).join('\n');
     }
 
     async loadObjectToCache(name) {
@@ -600,28 +804,4 @@ async function start() {
 }
 start();
 
-window.addEventListener('keydown', e => {
-    if(!world.player.myTurn) return;
 
-    switch(e.code) {
-        case 'KeyW':
-        case 'ArrowUp':
-            world.player.tryToMove(0, 1);
-            break;
-        case 'KeyS':
-        case 'ArrowDown':
-            world.player.tryToMove(0, -1);
-            break;
-        case 'KeyD':
-        case 'ArrowRight':
-            world.player.tryToMove(1, 0);
-            break;
-        case 'KeyA':
-        case 'ArrowLeft':
-            world.player.tryToMove(-1, 0);
-            break;
-        case 'Space':
-            world.player.pass();
-            break;
-    }
-});

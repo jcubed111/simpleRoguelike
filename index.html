@@ -8,7 +8,28 @@
     <div id="mapView"></div>
     <div id="hud">
         <div id="logView"></div>
-        <div id="hpView">HP: (10/15) [##########_____]</div>
+        <div id="hpView">HP:</div>
+        <div id="cellInfo" class='colorText hidden'>
+            <div class="vertDecor v_0"></div>
+            <div class="section">
+                <div class="horizDecor">----------------------------------------</div>
+                <div class="contentArea pre"></div>
+                <div class="horizDecor">----------------------------------------</div>
+            </div>
+            <div class="vertDecor v_1"></div>
+            <div class="section">
+                <div class="horizDecor">----------------------------------------</div>
+                <div class="contentArea pre"></div>
+                <div class="horizDecor">----------------------------------------</div>
+            </div>
+            <div class="vertDecor v_2"></div>
+            <div class="section">
+                <div class="horizDecor">----------------------------------------</div>
+                <div class="contentArea pre"></div>
+                <div class="horizDecor">----------------------------------------</div>
+            </div>
+            <div class="vertDecor v_3"></div>
+        </div>
     </div>
     <script>
         document.getElementById('mapView').addEventListener('click', e => {

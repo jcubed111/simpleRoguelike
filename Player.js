@@ -2,15 +2,16 @@ const raceBases = {
     orc: {
         maxHp: 15,
         strength: 1,
+        voice: -1,
         unarmedAttack: '1d3',
     },
     elf: {
-        maxHp: 10,
+        maxHp: 7,
         soul: 1,
         unarmedAttack: '1',
     },
     tiefling: {
-        maxHp: 15,
+        maxHp: 10,
         precision: 1,
         unarmedAttack: '1d2',
     },
@@ -47,11 +48,15 @@ const classBases = {
 class Player extends Character {
     constructor(world, race, className) {
         super(world);
+        this.type = race + ' ' + className;
+        this.humanoid = true;
         this.icon = '@';
         this.color = 0xdddddd;
         this.race = race;
         this.class = className;
         this.myTurn = true;
+        this.level = 1;
+        this.description = 'Self-proclaimed hero and loyal employee of Maroon Knights Adventuring Company';
 
         // get race base stuff
         this.maxHp = this.currentHp = raceBases[race].maxHp;

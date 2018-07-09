@@ -189,6 +189,24 @@ class Cell{
     occupiedBy() {
         return _.find(this.map.characters, e => e.x == this.x && e.y == this.y) || false;
     }
+
+    generateBaseInfo() {
+        return `
+%t${this.type}
+A plain section of %n${this.type}
+%dIt appears to have been here for a long time, but you can't tell how long without some chronology tools.
+        `;
+    }
+
+    generateItemInfo() {
+        // TODO
+        return "";
+    }
+    generateCharacterInfo() {
+        const o = this.occupiedBy();
+        if(!o) return "";
+        return o.generateInfoBlock();
+    }
 }
 
 class RoomLight{
@@ -445,12 +463,16 @@ class Room{
     populate(numEnemies) {
         const map = this.map;
 
-        let floorCells = this.getCells().filter(c => c.type == 'floor');
+        let floorCells = this.getCells().filter(c => c.type == 'floor' || c.type == 'water');
         floorCells = _.shuffle(floorCells);
 
         while(floorCells.length && numEnemies > 0) {
             const cell = floorCells.pop();
-            const enemy = new enemyTypes.Kobold(this.map.world, 1);
+            const enemyType = ({
+                floor: enemyTypes.Kobold,
+                water: enemyTypes.Piranha,
+            })[cell.type];
+            const enemy = new enemyType(this.map.world, 1);
             enemy.x = cell.x;
             enemy.y = cell.y;
             this.map.characters.push(enemy);
@@ -728,7 +750,7 @@ class Map{
                         c.lightSpec = new CellPointLightSpec(
                             new Vec3(c.x+lx, c.y+ly, 0.8),
                             0xff7700,
-                            3.0,
+                            5.0,
                             1.5,
                             1.4
                         );
@@ -737,7 +759,7 @@ class Map{
                         c.lightSpec = new CellPointLightSpec(
                             new Vec3(c.x+lx, c.y+ly, 0.2),
                             0xff11cc,
-                            2.0,
+                            4.0,
                             1.5,
                             1.4
                         );

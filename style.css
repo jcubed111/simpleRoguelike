@@ -42,11 +42,6 @@ canvas {
 
 #hud{
     font-size: 20px;
-    text-shadow:
-        1px 1px 0px #000,
-        1px -1px 0px #000,
-        -1px 1px 0px #000,
-        -1px -1px 0px #000;
 }
 
 #hpView{
@@ -57,6 +52,11 @@ canvas {
     z-index: 5;
     pointer-events: none;
     white-space: pre;
+    text-shadow:
+        1px 1px 0px #000,
+        1px -1px 0px #000,
+        -1px 1px 0px #000,
+        -1px -1px 0px #000;
 }
 
 #logView{
@@ -67,6 +67,11 @@ canvas {
     z-index: 5;
     pointer-events: none;
     white-space: pre;
+    text-shadow:
+        1px 1px 0px #000,
+        1px -1px 0px #000,
+        -1px 1px 0px #000,
+        -1px -1px 0px #000;
 }
 
 #logView .row{
@@ -76,3 +81,49 @@ canvas {
 #logView .row::first-letter{
     text-transform: uppercase;
 }
+
+.hidden{
+    display: none!important;
+}
+
+#cellInfo{
+    position: fixed;
+    background: #222226;
+    padding: 10px 4px;
+    left: 10px;
+    top: 40px;
+    width: auto;
+    height: auto;
+    z-index: 4;
+
+    cursor: default;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+    display: flex;
+    flex-direction: row;
+}
+
+#cellInfo .vertDecor,
+#cellInfo .horizDecor{
+    white-space: pre;
+    color: #666;
+}
+
+.colorText{
+    font-size: 20px;
+    color: #c22;
+}
+
+.pre{
+    white-space: pre;
+}
+
+.colorText .decoration{ color: #666; }
+.colorText .bold{ color: #6e8be5; }
+.colorText .title{ color: #eee; }
+.colorText .number{ color: #32b089; }
+.colorText .regular{ color: #8b8b8b; }
+.colorText .error{ color: #c22; }

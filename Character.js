@@ -16,6 +16,7 @@ class Character{
         this.maxHp = 5;
         this.currentHp = 5;
 
+        this.acBase = 5;
         this.strength = 0;
         this.soul = 0;
         this.precision = 0;
@@ -25,13 +26,16 @@ class Character{
         this.flying = false;
         this.aquaticOnly = false;
 
+        // unarmed attacks
+        this.unarmedVerb = 'punches';
+        this.unarmedAttack = '0';
+
         // gear
-        this.unarmedAttack;
-        this.weapon;
-        this.offHandItem;
-        this.helmet;
-        this.armor;
-        this.boots;
+        this.weapon = null;
+        this.offHandItem = null;
+        this.helmet = null;
+        this.armor = null;
+        this.boots = null;
 
         // spells
         this.spells = [];
@@ -39,8 +43,103 @@ class Character{
         // inventory
         this.inventory = [];
 
-        // view and animation properties
+        /* view and animation properties */
         this.attackOffset = new THREE.Vector2(0, 0); // an offset that gets added to your position to animate attacks
+    }
+
+    generateInfoBlock(indent = 0) {
+        return [
+            this.generateInfoBlockHeader(indent),
+            this.generateInfoBlockScores(indent),
+            this.generateInfoBlockAttacks(indent),
+            this.generateInfoBlockGear(indent),
+            this.generateInfoBlockSpells(indent),
+        ].filter(t => t.length).join(
+            '\n%d----------------------------------------\n'
+        );
+    }
+
+    generateInfoBlockHeader(indent = 0) {
+        let result = '';
+        let colorString = this.color.toString(16);
+        result += `%t${titleCase(this.type)} %d- %c{#${colorString}}${this.icon} %d(level %n${this.level}%d)\n`;
+        result += `  %d${this.description}\n`;
+        result += `HP: %b${this.currentHp}/${this.maxHp}\n`;
+        result += `AC: %b${this.getTotalAc()} %d(${this.getAcDesc()})\n`;
+        result += `Movement: %b`;
+        if(this.flying) {
+            result += 'flying';
+        }else if(this.aquaticOnly) {
+            result += 'swimming';
+        }else{
+            result += 'regular';
+        }
+        return result;
+    }
+
+    generateInfoBlockScores(indent = 0) {
+        return padded(`strength: %b${this.strength}`, 19) +
+            `%rsoul: %b${this.soul}\n` +
+            padded(`precision: %b${this.precision}`, 19) +
+            `%rvoice: %b${this.voice}`;
+    }
+
+    generateInfoBlockAttacks(indent = 0) {
+        let result = `Unarmed Attack: %n${this.unarmedAttack} %d(pre vs ac)`;
+        if(this.humanoid) {
+            result += '\nWeapon:';
+            if(this.weapon) {
+                result += '\n' + this.weapon.generateInfoBlock(2);
+            }else{
+                result += ' %dnone';
+            }
+
+            result += '\nOffhand Item:';
+            if(this.offHandItem) {
+                result += '\n' + this.offHandItem.generateInfoBlock(2);
+            }else{
+                result += ' %dnone';
+            }
+        }
+        // TODO: extra unarmed attacks
+        return result;
+    }
+
+    generateInfoBlockGear(indent = 0) {
+        // Helmet: %dnone
+        // Armor:
+        //   %bDirty Rag %d(level 0)
+        //     %d-%r light
+        //     %d-%r ac bonus: %n0
+        // Boots: %dnone
+
+        if(!this.humanoid) return '';
+
+        let result = '';
+        [
+            ['Helmet', this.helmet],
+            ['Armor', this.armor],
+            ['Boots', this.boots],
+        ].forEach(([title, thing]) => {
+            result += `\n${title}:`;
+            if(thing) {
+                result += '\n' + thing.generateInfoBlock(2);
+            }else{
+                result += ' %dnone';
+            }
+        });
+        return result.trim();
+    }
+
+    generateInfoBlockSpells(indent = 0) {
+        if(this.spells.length == 0) {
+            if(this.isPlayer()) {
+                return 'Spells: %dnone';
+            }else{
+                return '';
+            }
+        }
+        return 'Spells:\n' + this.spells.map(s => s.generateInfoBlock(2)).join('\n');
     }
 
     getCell() {
@@ -58,8 +157,20 @@ class Character{
     }
 
     getTotalAc() {
-        // TODO: account for armor/dex
-        return 5;
+        const dodgeBonus = this.precision;
+        const armorBonus = this.armor ? this.armor.acBonus : 0;
+        const armorAllowsDodge = this.armor ? this.armor.isLight : true;
+        return this.acBase + (armorAllowsDodge*dodgeBonus) + armorBonus;
+    }
+
+    getAcDesc() {
+        // ex: 5 base + 1 armor + 1 dodge
+        const dodgeBonus = this.precision;
+        const armorBonus = this.armor ? this.armor.acBonus : 0;
+        const armorAllowsDodge = this.armor ? this.armor.isLight : true;
+        return `${this.acBase} base` +
+            (this.armor ? ` + ${armorBonus} armor` : '') +
+            (armorAllowsDodge ? ` + ${dodgeBonus} dodge` : '');
     }
 
     canMoveIntoCell(c) {
@@ -165,7 +276,23 @@ class Character{
             return;
 
         }else{
-            // TODO: unarmed attack
+            // unarmed attack: 1d20 + pre vs ac, no crit
+            const hitRoll = randInt(1, 21) + this.precision;
+            if(hitRoll > enemy.getTotalAc()) {
+                let damage = evalDiceNotation(this.unarmedAttack, this.getScores());
+                if(this.isPlayer()) {
+                    this.world.log(`You punch ${enemy.getLogName()} for ${damage} damage.`)
+                }else{
+                    this.world.log(`${this.getLogName()} ${this.unarmedVerb} you for ${damage} damage.`)
+                }
+                enemy.takeDamage(damage);
+                return;
+            }
+            if(this.isPlayer()) {
+                this.world.log(`You miss ${enemy.getLogName()}.`)
+            }else{
+                this.world.log(`${this.getLogName()} misses you.`)
+            }
         }
     }
 

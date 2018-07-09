@@ -1,0 +1,101 @@
+Orc Fighter - level 1
+Exp: 0/5
+HP: 10/15
+AC: 7 (5 base + 2 armor + 0 dodge)
+Movement: regular
+-------------------------------------
+strength: 5     soul: 0
+precision: 4    voice: 0
+-------------------------------------
+Unarmed Attack: 1d3
+Weapon: Sword - level 1
+    - melee
+    - hit bonus: pre
+    - damage: 1d4 + 1str
+    - crit class: 20
+    - crit damage: 2d4 + 2str
+Offhand Item: none
+Helmet: none
+Armor: Plate Mail - level 1
+    - type: heavy
+    - ac bonus: 2
+Boots: none
+-------------------------------------
+Spells: none
+-------------------------------------
+
+
+
+Human Bard - level 1
+Exp: 0/5
+HP: 10/10
+AC: 7 (5 base + 1 armor + 1 dodge)
+Movement: regular
+-------------------------------------
+strength: 1     soul: 0
+precision: 1    voice: 3
+-------------------------------------
+Unarmed Attack: 1
+Weapon: Lyre - level 1
+    - melee
+    - hit bonus: 0
+    - damage: 1d2
+    - crit class: no crit
+    Song of Friendship
+        - target: self
+        - range: 5
+        - description:
+            All characters in range
+            become friendly for
+            1d6 + voi turns
+Offhand Item: none
+Helmet: none
+Armor: Cloth - level 1
+    - type: light
+    - ac bonus: 1
+Boots: Winged Sandles
+    - ac bonus: 0
+    Feather Fall
+        - passive
+        - description:
+            The wearer does not take
+            fall damage
+-------------------------------------
+Spells: none
+-------------------------------------
+
+
++---+--------+
+| @ | Player |
++---+--------+
+
++-+
+|^|
+| |
+|#|
+|#|
+| |
+| |
+| |
+| |
+|v|
++-+
+
+
++------------+   +------------+   +------------+   +------------+
+| Orc        |   | Elf        |   | Tiefling   |   | Human      |
+|------------|   |------------|   |------------|   |------------|
+| Hp: 15     |   | Hp: 7      |   | Hp: 10     |   | Hp: 10     |
+| Punch: 1d3 |   | Punch: 1   |   | Punch: 1d2 |   | Punch: 1   |
+| +1 str     |   | +1 sol     |   | +1 pre     |   | +1 voi     |
+| -1 voi     |   |            |   |            |   |            |
++------------+   +------------+   +------------+   +------------+
+
++------------+   +------------+   +------------+   +------------+
+| Fighter    |   | Mage       |   | Rogue      |   | Bard       |
+|------------|   |------------|   |------------|   |------------|
+| Sword      |   | Magic Mis. |   | Dagger     |   | Lyre       |
+| +1 str     |   | +1 sol     |   | +1 pre     |   | +1 voi     |
+|            |   |            |   |            |   |            |
++------------+   +------------+   +------------+   +------------+
+
