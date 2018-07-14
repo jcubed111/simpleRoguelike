@@ -1,0 +1,96 @@
+Status effects
+    Frozen - misses turn
+    Weakened - 5 less ac
+    Bleeding - take decreasing damage every turn
+    Burning - take constant damage every turn
+    Poisoned - take increasing damage every turn till poison wears off
+    Confused - all movement is random
+    Sleeping - misses turn until takes damage
+    Friendly - does not attack
+    Stunned - -10 ac and misses turn (for 1 turn)
+    Retrograde - damage and healing switch
+    Cursed - All healing is damage instead
+    Protected - immune to other status effects
+    Recovering - restore decreasing health every turn
+    Immobilized - cannot move
+    Stone Skin - +5 ac
+    Blinded - cannot see any square besides adjacent ones
+
+Damage
+    *Magic missile I (closest target)
+    *Magic missile II (Los target)
+    *Magic missile III (all targets in Los)
+    *Fire explosion 3x3 at self
+    *Shoot a fireball, single target
+    *Fire explosion 3x3 at visible tile
+    *Lightning - chain damage
+    *Lightning II
+    *Lightning III
+    Leach - do damage and heal
+    Lesser Smite
+    Smite
+Control
+    Pull - move target to closest adjacent square
+    Push - push target back x squares
+    Push all - push all targets within x range back y
+    Scatter - teleport creature to random square
+    Swap two creature's locations
+Tile effects
+    Zone of darkness
+    *Poison cloud
+    *Fire wall (set all tiles in a line on fire for x turns)
+    *Tunnel (destroy 3 tiles in a line)
+    *Build wall - add one tile of wall los
+    *Pit - add a pit in the floor, one tile Los
+    *Flood - make one floor tile into water
+Healing
+    *Heal self for x damage
+    *Heal Los for x damage
+    *Heal all friendly characters in Los
+    *Put up a healing aura at self
+    *Recover self
+    *Recover los
+Buffs
+    *Cure poison
+    *Extinguish flames
+    *Thaw
+    *Protect (applies protected and removes other effects)
+    *Stone Skin self
+    *Stone Skin Los
+    *Retrograde self
+    *Retrograde Los
+Debuffs
+    *Weaken target Los
+    *Weaken target while in zone
+    *Freeze random visible target
+    *Freeze target Los
+    *Free all targets in a zone
+    *Stun a target
+    *Confuse Los
+    Confuse aoe
+    Confuse all in x range
+    *Immobilize Los
+    *Immobilize aoe
+    Immobilize all in x range
+Summoning
+    *Tame animal
+    *Summon animal companion
+    Summon potion
+    Summon demon
+    Summon etherial weapon
+    Summon ammo
+Movement
+    Zoom - move 3 tiles in any direction
+    Teleport to random location on level
+    Teleport to los tile
+    Teleport through wall
+    Teleport to any square within x tiles
+    Teleport to 10 turns ago?
+    Swap locations with a creature
+Gear
+    Upgrade
+    Enchant
+    Curse
+    Make scroll
+    Brew potion/poison
+Spell sword

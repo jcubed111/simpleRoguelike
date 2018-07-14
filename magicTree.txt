@@ -1,0 +1,69 @@
+Tier 0 - 1                       Tier 1 - 1                        Tier2 - 3                         Tier 3 - 7                        Tier 4 - 12                       Tier 5 - 18                       Tier 6 - 25
+str, pre, sol, voi:
+
+
+Paladins:
+                                                                                                                                    >- [1 2 7 2  healAll] ------------------------------------------------ [0 5 20 0 fullHealAll]
+                                                                                                                                    |
+                                                                                                  >- [1 2 4 0  heal] ---------------+- [1 2 7 2  healingAura] -------------------------------------------- [0 5 20 0 rez]
+                                                                                                  |                                 |
+                                                                                                  |                                 >- [1 0 9 0  regenerate1] ---------- [2 0 16 0 regenerate2]
+                                                                                                  |
+                                                                >- [1 0 2 0  stoneSkin1] ---------+- [2 0 5 0  stoneSkin2]
+                                                                |
+                                                                >- [0 1 1 0  extinguishFlames1] --+- [0 3 4 0  extinguishFlames2]
+                                                                |                                 |
+                                                                |                             >--->- [1 0 4 0  protect1] ------------- [2 0 9 0  protect2]
+                                                                |                             |
+                              >- [0 0 1 0  lesserHeal] ---------+- [0 0 2 0  curePoison1] ----+----- [0 0 7 0  curePoison2]
+                              |                                 |
+                              |                                 >----------------------------------- [0 0 7 0  thaw]
+Mages:                        |
+[0 0 1 0  magicMissile1] -----+---------------------------------+- [0 0 3 0  magicMissile2] -------- [0 0 6 0  magicMissile3] -------- [0 0 0 0  ???]
+                              |                                 |
+                              |                             >--->- [0 0 3 0  fireExplosion1] ------- [0 2 6 0  fireball] -----------+- [0 2 10 0 fireExplosion2] ------- [0 2 16 0 fireExplosion3] ------- [0 0 20 5 hellFlames]
+                              |                             |   |                                                                   |
+                              |                             |   |                                                                   >- [0 0 12 0 fireWall]
+                              |                             |   |
+                              |                             >--->- [0 0 4 0  lightning1] ----------- [0 0 8 0  lightning2] ----------- [0 0 12 0 lightning3] ----------- [0 0 18 0 storm]
+                              |                             |
+Shamen:                       >- [0 0 1 0  weaken] ---------+--------------------------------------- [0 0 5 2  retrograde1] ---------- [0 0 9 3  retrograde2] ---------- [0 0 10 8 curse]
+                                                            |
+                                                            >----- [0 0 3 0  flashBang] ----------+- [0 0 7 0  freeze1] ------------+- [0 0 12 0 freeze2] -------------- [0 0 18 0 frostZone]
+                                                            |                                     |                                 |
+                                                            |                                     |                                 >- [0 3 9 0  frostShock]
+                                                            |                                     |                                 |
+                                                            |                                     |                                 >- [2 0 10 0 freezeHeal]
+                                                            |                                     |
+                                                            |                                     >- [0 1 6 0  blind] ---------------- [0 2 10 0 greaterBlind]
+                                                            |
+                                                            |                                     >- [0 0 5 2  confusingBolt] ------>- [0 0 8 4  cloudOfConusion]
+                                                            |                                     |                                 |
+                                                            >----- [0 0 2 1  weakeningCloud] -----+- [0 0 4 3  poisonCloud] --------+- [0 0 6 6  poisonBolt] ----------- [0 0 9 9  poisonTrap]
+                                                                                                  |
+                                                                >--------------------------------->- [0 0 5 2  flood] ---------------- [0 0 12 0 tunnel] -------------+- [0 0 18 0 buildWall]
+Druids:                                                         |                                                                                                     |
+                                                                |                                                                                                     >- [0 0 16 2 pit] ------------------ [0 0 22 2 cataclysm]
+                                                                |
+                                                                >----------------------------------- [0 0 4 3  grippingVine] --------- [0 0 7 5  grippingVines]
+                                                                |
+                              >- [0 0 1 0  naturalArmor1] ------+- [0 0 2 1  herbalRemedy] --------- [0 0 6 1  naturalArmor2] -------- [???]
+                              |
+                              >----------------------------------- [0 0 0 3  callAnimal] ----------- [0 0 4 3  summonAnimalC1] ------- [0 0 6 6  summonAnimalC2] ------- [0 0 9 9  summonAnimalC3] ------- [0 0 12 12 summonAnimalGuardian]
+                              |
+                              |                                                               >----- [0 0 3 4  animalCAttack]
+                              |                                                               |
+[0 0 0 1  tameAnimal] --------+- [0 0 0 2  commandAnimal] -------- [0 0 1 2  animalCSpeed] ---+--->- [0 0 4 3  animalCDefenseBonus]
+                              |                                                                   |
+                              >----------------------------------- [0 0 1 2  healAnimal] ---------+- [0 0 5 2  regenerateAnimal] ----- [0 0 10 2 reviveAnimalC]
+                              |
+                              >- [1 0 1 0  bestialPounce] ------+- [0 0 1 2  roar] ----------------- [0 0 2 5  ferociousRoar] --+----- [???]
+                                                                |                                                               |
+                                                                |                                                               >--->----------------------------------- [6 0 9 6  wildShape]
+                                                                |                                                                   |
+                                                                >- [1 0 2 0  bestialClaw] ---------- [3 0 3 0  savageBite] ---------+- [6 0 6 0  poisonBite]
+-                                                                                                                                   |
+                                                                                                                                    >- [3 0 9 0  rabidBite]
+-
+Bards:
+                                                                                                                                       [0 0 9 3  confuseaoe] ----------- [0 0 12 6 massHysteria]

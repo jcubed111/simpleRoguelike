@@ -1,0 +1,77 @@
+// 0. Magic Missile I - sol 1 - Shoot a magical missile at the closest enemy, dealing [sol] damage
+//         2. Magic Misile II - sol 3 - Shoot a magical missile at any enemy you can see, dealing [sol] damage
+//             3. Magic Missile III - sol 7? - Shoot magical missiles at all enemies you can see, dealing [sol] damage to each one
+//         2. Fire Explosion - sol 3 - All squares around you burst into flames, dealing 1d4 damage and lighting characters on fire for [sol] turns
+//             3. Fireball - sol 6, pre 2 - Shoot a fireball at a square, dealing 1d4 damage and igniting any characters on the square for [sol] turns
+//                 4. Fire Explosion II - sol 11, pre 2 - Create a burst of fire on any visible square, dealing 2d4 damage to any characters in range, and lighting all characters on fire for [sol] turns
+//                     5. Fire Explosion III - sol 17, pre 2 - ^ and pushing any hit characters back 1 square
+//                         6. Hell Flames - sol 25 - Deal 2d6 damage to all visible characters, and ignite them all for [sol] turns.
+//                 4. Fire Wall - sol 13 - Set a line of tiles on fire
+//         2. Lightning I - sol 4 - Attack any enemy you can see with a lightning bolt, dealing [sol] damage
+//             3. Lightning II - sol 8 - Like Lightning I, but chain to one extra enemy dealing 1d8
+//                 4. Lightning III - sol 12 - Like Lightning I, but hit three enemies, first takes [sol], second takes d28, third takes 1d8
+//                     5. Storm - sol 18 - All characters within 7 range take 3d8 lightning damage and are stunned
+    // 1. Lesser Heal - sol 1 - Heal self for 1d6 + sol damage
+    //         3. Thaw - sol 3 - Thaws any visible creature
+    //     2. Cure Poison - sol 2 - Removes poison from self
+    //         3. Cure Poison II - sol 5 - Cure Poison I for any visible creature
+    //         3. (Protect)
+    //     2. Extinguish Flames - sol 1, pre 1 - Removes any burning effects from self
+    //         3. Extinguish Flames II - sol 2, pre 2 - Extinguish Flames I for any visible creature
+    //         3. Protect - sol 6 - Applies protected and removes other effects to self
+    //             4. Protect II - 10 - Protect I for any visible creature
+    //     2. Stone Skin - sol 1, str 1 - Applies stone skin to self for [str] turns
+    //         3. Stone Skin II - sol 4, str 1 - Applies stone skin to any visible creature
+    // 1. Weaken - sol 1 - Weaken a creature you can see for [sol] turns
+    //         3. Retrograde I - sol 8 - Applies retrograde to self
+    //             4. Retrograde II - sol 12 - Applies retrograde to one target you can see
+    //     2. Flash Bang - sol 2 - Stun an adjacent creature for 1 turn
+    //         3. Blind - sol 3, voi 3 - Blind a visible creature
+    //         3. Freeze I - sol 4, voi 2 - Freeze a random visible creature for 1d4 turns
+    //             4. Freeze Heal - sol 6, voi 2 - Freeze yourself for [sol] turns, but also apply recovering [sol]
+    //             4. Frost Shock - sol 10 - Deal 4d6 + sol damage to a visible frozen creature
+    //             4. Freeze II - sol 9, voi 3 - Freeze a visible creature for 2d4 turns
+    //                 5. Frost Zone - sol 14, voi 4 - Create a zone of frost that freezes any creature ending it's turn there for 2d4 turns. The zone lasts 5 turns.
+            // 3. Poison Cloud - sol 5, voi 2 - Create a zone of poison [sol] lasting 5 turns.
+
+
+0. Tame Animal I - voi 1 - Tame an animal you can see of level less than or equal to your [voi] to become your animal companion
+        2. Heal Animal - voi 2 - Heal an animal you can see for 1d6 + sol.
+        2. Call Animal - sol 1, voi 1 - All animals within
+            3. Summon Animal Companion I - sol 3, voi 3 - Summon a random lesser animal companion (level 4)
+                4. Summon Animal Companion II - sol 6, voi 6 - Summon a random midlevel animal companion (level 9)
+                    5. Summon Animal Companion III - sol 9, voi 9 - Summon a random greater animal companion (level 15)
+                        6. Summon Animal Guardian - sol 12, voi 12 - Summon one of the legendary animal guardians (level 24)
+    1. Command Animal Attack - voi 2 - Tell your animal companion to target any character you can see
+
+1. Zoom
+1. Brew Potion
+        3. Summon Potion
+1. Song of Friendship
+    2. Song of Confusion
+        3. Song of Sleep
+
+Natural Armor: Immobalize self for 1d4 turns, but gain stone skin [2sol]
+Herbal Remedy: Cure poison on self
+Natural Armor II: Immobalize self for 2d4 turns, but gain stoneskin 2 sol, and protected 2 sol
+Gripping Vine: Immobalize one creature los for [sol] turns
+Gripping Vines: Immobalize all creatures within 5 of target square for [sol] turns
+Tunnel: destroy three tiles in a line (directional)
+Build Wall: add one tile of wall los
+Flood: Transform one floor tile to water, los
+Pit: transform one floor tile to pit, los
+Cataclysm: Transform 5x5 times into pit, los
+Bestial Pounce: dash 3 tiles, pushing back any enemy you hit and dealing 1d4 damage
+Roar: Give an adjacnet character weakened for [voi] turns
+Bestial Claw: swipe at an adjacent enemy for [str] damage
+Ferocious Roar: Give all characters within 2 squares weakened [voi] and stunned (1)
+Savage Bite: Bite an adjacent creature for 1d6 + str damage, and apply bleeding [str]
+Poison Bite: Bite an adjacent creature for 1d6 + str damage, and apply poisoned [sol]
+
+
+str > sol: paladins
+sol > pre: mages
+         : necromancers
+sol > voi: shamen
+sol = voi: druids
+voi > sol: bards
