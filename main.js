@@ -480,9 +480,10 @@ class WorldView {
             r: 'regular',
             c: 'color', // format: %c{#123456}
         };
-        return text.trim().split('\n').map(line => {
+        return text.trimEnd().split('\n').map(line => {
             let resultLength = 0;
-            let result = blockIndentPadding + "<span class='regular'>";
+            let lastSpanStart = "<span class='regular'>";
+            let result = blockIndentPadding + lastSpanStart;
             let indent = line.search(/[^ \-]/);
             for(let i=0; i < line.length; i++) {
                 let l = line[i];
@@ -491,11 +492,19 @@ class WorldView {
                         const next = line[++i];
                         if(next == 'c') {
                             const color = line.substr(i).match(/\{(#[0-9a-fA-F]+)\}/)[1];
-                            result += "</span><span class='"+classNames.c+"' style='color: "+color+";'>";
+                            lastSpanStart = "<span class='"+classNames.c+"' style='color: "+color+";'>"
+                            result += "</span>" + lastSpanStart;
                             i += color.length + 2;
+                        }else if(next == 'l') {
+                            const linkInfo = line.substr(i).match(/\{(.+?)\}/)[1];
+                            result += '</span><a data-linkInfo="' + linkInfo + '">' + lastSpanStart;
+                            i += linkInfo.length + 2;
+                        }else if(next == 'e') {
+                            result += "</span></a>" + lastSpanStart;
                         }else{
                             let className = classNames[next] || 'error';
-                            result += "</span><span class='"+className+"'>";
+                            lastSpanStart = "<span class='"+className+"'>"
+                            result += "</span>" + lastSpanStart;
                         }
                         break;
                     case ' ':
